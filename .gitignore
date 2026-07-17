@@ -1,0 +1,28 @@
+# MATLAB generated files
+*.asv
+*.autosave
+*.mlx~
+*.m~
+
+# Figures
+*.fig
+
+# Workspace
+*.mat
+
+# Logs
+*.log
+
+# Temporary files
+slprj/
+codegen/
+
+# OS files
+Thumbs.db
+desktop.ini
+
+# VSCode
+.vscode/
+
+# MATLAB Project cache
+resources/project/
