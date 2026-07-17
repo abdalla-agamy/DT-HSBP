@@ -3,22 +3,18 @@ clc
 
 cfg = config();
 
-c = Cluster(1);
+swarm = Swarm(cfg);
 
-u1 = UAV(1,1,cfg);
-u2 = UAV(2,1,cfg);
-u3 = UAV(3,1,cfg);
+fprintf("Initial UAVs : %d\n", swarm.totalUAVs());
 
-c.addUAV(u1);
-c.addUAV(u2);
-c.addUAV(u3);
+JoinEvent.execute(swarm,3);
 
-fprintf("Cluster size = %d\n", c.count());
+fprintf("After Join : %d\n", swarm.totalUAVs());
 
-disp(c.head.id)
+FailureEvent.execute(swarm,500);
 
-c.removeUAV(1);
+fprintf("Active UAVs : %d\n", swarm.activeUAVs());
 
-fprintf("Cluster size = %d\n", c.count());
+LeaveEvent.execute(swarm,100);
 
-disp(c.head.id)
+fprintf("After Leave : %d\n", swarm.totalUAVs());
