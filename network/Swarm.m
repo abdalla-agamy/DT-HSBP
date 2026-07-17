@@ -44,6 +44,15 @@ classdef Swarm < handle
             %Initialize it after creating the initial swarm:
             obj.nextUAVID = cfg.numUAVs + 1;
 
+            engine = SBPEngine(cfg);
+
+            for c = 1:length(obj.clusters)
+
+                obj.clusters(c).groupKey = ...
+                    engine.generateGroupKey(obj.clusters(c).uavs);
+
+            end
+
         end
 
         %------------------------------------------

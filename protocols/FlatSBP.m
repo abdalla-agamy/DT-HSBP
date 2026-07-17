@@ -22,12 +22,9 @@ classdef FlatSBP < Protocol
 
             JoinEvent.execute(obj.swarm,clusterID);
 
-            % Entire swarm receives new key
-            N = obj.swarm.totalUAVs();
+            obj.addCost(obj.swarm.totalUAVs());
 
-            obj.metrics.addCommunication(N);
-            obj.metrics.addComputation(N);
-            obj.metrics.joins = obj.metrics.joins + 1;
+            obj.recordJoin();
 
         end
 
@@ -37,11 +34,10 @@ classdef FlatSBP < Protocol
 
             LeaveEvent.execute(obj.swarm,uavID);
 
-            N = obj.swarm.totalUAVs();
+            obj.addCost(obj.swarm.totalUAVs());
 
-            obj.metrics.addCommunication(N);
-            obj.metrics.addComputation(N);
-            obj.metrics.leaves = obj.metrics.leaves + 1;
+            obj.recordLeave();
+
 
         end
 
@@ -50,8 +46,8 @@ classdef FlatSBP < Protocol
         function failure(obj,uavID)
 
             FailureEvent.execute(obj.swarm,uavID);
-            
-            obj.metrics.failures = obj.metrics.failures + 1;
+
+            obj.recordFailure();
 
         end
 

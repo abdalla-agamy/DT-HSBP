@@ -4,6 +4,7 @@ classdef Cluster < handle
         id
         head            % Cluster Head (UAV object)
         uavs            % Array of UAV objects
+        groupKey
     end
 
     methods
