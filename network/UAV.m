@@ -21,6 +21,8 @@ classdef UAV < handle
 
         % Membership
         active
+
+        dt
     end
 
     methods
@@ -52,6 +54,10 @@ classdef UAV < handle
             obj.stabilityScore = 0;
 
             obj.active = true;
+
+            obj.dt = DTAgent();
+
+            obj.dt.observe(obj);
 
         end
 
