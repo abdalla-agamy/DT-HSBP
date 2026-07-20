@@ -105,6 +105,36 @@ classdef Swarm < handle
 
         end
 
+        function step(obj,cfg)
+
+            for c = 1:length(obj.clusters)
+
+                cluster = obj.clusters(c);
+
+                for i = 1:cluster.count()
+
+                    u = cluster.uavs(i);
+
+                    if ~u.active
+                        continue
+                    end
+
+                    % Physical movement
+                    u.move(cfg.timeStep);
+
+                    % Energy consumption
+                    u.consumeEnergy(0.05);
+
+                    % DT update
+                    u.dt.tick(u,cfg);
+
+                end
+
+            end
+
+        end
+
+
     end
 
 end
