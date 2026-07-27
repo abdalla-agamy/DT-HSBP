@@ -1,20 +1,26 @@
-classdef JoinEvent
+classdef JoinEvent < events.Event
 
-    methods(Static)
+    properties (SetAccess = private)
 
-        function execute(swarm, clusterID)
+        uavID      double
+        clusterID  double
 
-            cfg = swarm.config;
+    end
 
-            % Determine next available ID
-            newID = swarm.nextUAVID;
-            swarm.nextUAVID = swarm.nextUAVID + 1;
+    methods
 
-            % Create UAV
-            u = UAV(newID, clusterID, cfg);
+        function obj = JoinEvent(time, uavID, clusterID)
 
-            % Add to cluster
-            swarm.clusters(clusterID).addUAV(u);
+            obj@events.Event(time, "Join");
+
+            obj.uavID = uavID;
+            obj.clusterID = clusterID;
+
+        end
+
+        function execute(obj, simulation)
+
+            simulation.addUAV(obj.uavID, obj.clusterID);
 
         end
 

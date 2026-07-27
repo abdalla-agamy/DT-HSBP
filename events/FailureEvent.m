@@ -1,14 +1,26 @@
-classdef FailureEvent
+classdef FailureEvent < events.Event
 
-    methods(Static)
+    properties (SetAccess = private)
 
-        function execute(swarm,uavID)
+        uavID   double
+        reason  string
 
-            u = swarm.findUAV(uavID);
+    end
 
-            if ~isempty(u)
-                u.fail();
-            end
+    methods
+
+        function obj = FailureEvent(time, uavID, reason)
+
+            obj@events.Event(time, "Failure");
+
+            obj.uavID  = uavID;
+            obj.reason = reason;
+
+        end
+
+        function execute(obj, simulation)
+
+            simulation.failUAV(obj.uavID, obj.reason);
 
         end
 

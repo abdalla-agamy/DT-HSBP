@@ -1,25 +1,26 @@
-classdef LeaveEvent
+classdef LeaveEvent < events.Event
 
-    methods(Static)
+    properties (SetAccess = private)
 
-        function execute(swarm, uavID)
+        uavID      double
+        clusterID  double
 
-            for c = 1:length(swarm.clusters)
+    end
 
-                cluster = swarm.clusters(c);
+    methods
 
-                for k = 1:length(cluster.uavs)
+        function obj = LeaveEvent(time, uavID, clusterID)
 
-                    if cluster.uavs(k).id == uavID
+            obj@events.Event(time, "Leave");
 
-                        cluster.removeUAV(uavID);
-                        return;
+            obj.uavID = uavID;
+            obj.clusterID = clusterID;
 
-                    end
+        end
 
-                end
+        function execute(obj, simulation)
 
-            end
+            simulation.removeUAV(obj.uavID, obj.clusterID);
 
         end
 
