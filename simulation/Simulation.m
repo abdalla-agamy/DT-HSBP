@@ -24,11 +24,48 @@ classdef Simulation < handle
 
         function step(obj)
 
-            obj.currentTime = obj.currentTime + 1;
+            % Advance simulation clock
+            obj.currentTime = obj.currentTime + obj.cfg.timeStep;
 
-            obj.swarm.step(obj.cfg);
+            % Process scheduled events
+            obj.processEvents();
+
+            % Update physical UAV states
+            obj.updatePhysicalWorld();
+
+            % Update Digital Twin models
+            obj.updateDigitalTwins();
+
+            % Execute protocol operations
+            obj.executeHSBP();
+
+            % Collect simulation statistics
+            obj.collectStatistics();
 
         end
+
+        function run(obj)
+
+            while obj.currentTime < obj.cfg.simulationTime
+
+                obj.step();
+
+            end
+
+        end
+
+        function processEvents(obj)
+        end
+        function updatePhysicalWorld(obj)
+        end
+        function updateDigitalTwins(obj)
+        end
+        function executeHSBP(obj)
+        end
+        function collectStatistics(obj)
+        end
+        
+
 
     end
 
