@@ -108,6 +108,19 @@ classdef Swarm < handle
             end
 
         end
+        %------------------------------------------
+        function uavs = getActiveUAVs(obj)
+
+            uavs = UAV.empty;
+
+            for i = 1:length(obj.clusters)
+
+                uavs = [uavs obj.clusters(i).getActiveUAVs()];
+
+            end
+
+        end
+
 
         %------------------------------------------
 

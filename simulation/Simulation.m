@@ -41,6 +41,16 @@ classdef Simulation < handle
             % Generate stochastic events
             eventCounts = obj.eventGenerator.generate();
 
+            events = obj.eventFactory.createEvents( ...
+                eventCounts, ...
+                obj.currentTime);
+
+            for i = 1:numel(events)
+
+                obj.eventQueue.schedule(events{i});
+
+            end
+
             % Process generated events
             obj.processEvents(eventCounts);
 
