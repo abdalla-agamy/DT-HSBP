@@ -20,7 +20,9 @@ classdef JoinEvent < Event
 
         function execute(obj, simulation)
 
-            simulation.addUAV(obj.uavID, obj.clusterID);
+            simulation.processJoinRequest( ...
+                obj.uavID, ...
+                obj.clusterID);
 
         end
 

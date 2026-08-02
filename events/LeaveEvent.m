@@ -20,7 +20,9 @@ classdef LeaveEvent < Event
 
         function execute(obj, simulation)
 
-            simulation.removeUAV(obj.uavID, obj.clusterID);
+            simulation.processLeaveRequest( ...
+                obj.uavID, ...
+                obj.clusterID);
 
         end
 

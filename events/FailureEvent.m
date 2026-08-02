@@ -20,7 +20,9 @@ classdef FailureEvent < Event
 
         function execute(obj, simulation)
 
-            simulation.failUAV(obj.uavID, obj.reason);
+            simulation.processFailure( ...
+                obj.uavID, ...
+                obj.clusterID);
 
         end
 

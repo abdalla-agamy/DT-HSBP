@@ -30,32 +30,19 @@ classdef Cluster < handle
 
         %----------------------------------------------
 
-        function removeUAV(obj,uavID)
+        function removed = removeUAV(obj, uavID)
 
-            idx = [];
+            removed = false;
 
-            for i = 1:length(obj.uavs)
+            for i = 1:length(obj.members)
 
                 if obj.uavs(i).id == uavID
-                    idx = i;
-                    break;
-                end
 
-            end
+                    obj.uavs(i) = [];
 
-            if ~isempty(idx)
+                    removed = true;
 
-                removedHead = isequal(obj.uavs(idx),obj.head);
-
-                obj.uavs(idx) = [];
-
-                if removedHead
-
-                    if isempty(obj.uavs)
-                        obj.head = [];
-                    else
-                        obj.head = obj.uavs(1);
-                    end
+                    return;
 
                 end
 

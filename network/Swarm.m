@@ -57,6 +57,33 @@ classdef Swarm < handle
 
         %------------------------------------------
 
+        function uav = addUAV(obj, uavID, clusterID)
+
+            % Create UAV
+            uav = UAV(uavID, clusterID, obj.config);
+
+            % Add UAV to the selected cluster
+            obj.clusters(clusterID).addUAV(uav);
+
+        end
+
+        %------------------------------------------
+        function removeUAV(obj, uavID)
+
+            for i = 1:length(obj.clusters)
+
+                if obj.clusters(i).removeUAV(uavID)
+
+                    return;
+
+                end
+
+            end
+
+        end
+
+
+
         function n = totalUAVs(obj)
 
             n = 0;
@@ -131,6 +158,39 @@ classdef Swarm < handle
                 end
 
             end
+
+        end
+
+        function id = allocateUAVID(obj)
+
+            id = obj.nextUAVID;
+
+            obj.nextUAVID = obj.nextUAVID + 1;
+
+        end
+
+
+        function uav = getRandomActiveUAV(obj)
+
+            activeUAVs = UAV.empty;
+
+            for i = 1:length(obj.clusters)
+
+                activeUAVs = [activeUAVs obj.clusters(i).getActiveUAVs()];
+
+            end
+
+            if isempty(activeUAVs)
+
+                uav = [];
+
+                return;
+
+            end
+
+            index = randi(numel(activeUAVs));
+
+            uav = activeUAVs(index);
 
         end
 
