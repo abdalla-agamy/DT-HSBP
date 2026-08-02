@@ -53,8 +53,7 @@ classdef DTAgent < handle
                 Residual.compute(actual,...
                 obj.predictedState, obj.cfg);
 
-            obj.stabilityScore = ...
-                StabilityModel.compute(obj.residual);
+            obj.stabilityScore = obj.residual;
 
             obj.state = actual;
 
@@ -72,7 +71,7 @@ classdef DTAgent < handle
            obj.initialized = true;
         end
 
-        function stable = isStable(obj,cfg)
+        function stable = isStable(obj)
 
             stable = StabilityModel.isStable( ...
                 obj.stabilityScore, ...

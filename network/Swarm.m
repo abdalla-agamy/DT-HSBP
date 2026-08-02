@@ -145,6 +145,23 @@ classdef Swarm < handle
 
         end
 
+        function cluster = findCluster(obj, clusterID)
+
+            cluster = [];
+
+            for i = 1:length(obj.clusters)
+
+                if obj.clusters(i).id == clusterID
+
+                    cluster = obj.clusters(i);
+                    return;
+
+                end
+
+            end
+
+        end
+
         function step(obj,cfg)
 
             for c = 1:length(obj.clusters)

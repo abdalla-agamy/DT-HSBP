@@ -76,7 +76,38 @@ classdef DigitalTwinManager < handle
             end
 
         end
+
         %----------------------------------------------------------
+        function candidates = findUnstableUAVs(obj, excludedIDs)
+
+            %FINDUNSTABLEUAVS Return UAV IDs predicted to become unstable.
+
+            if nargin < 2
+                excludedIDs = [];
+            end
+            candidates = [];
+
+            for i = 1:numel(obj.agents)
+
+                id = obj.agents(i).uav.id;
+
+                if ismember(id, excludedIDs)
+                    continue;
+                end
+
+                if StabilityModel.shouldLeave( ...
+                        obj.agents(i).residual, ...
+                        obj.cfg)
+
+                    candidates(end+1) = id;
+
+                end
+
+            end
+
+        end
+        %----------------------------------------------------------
+
         function n = count(obj)
 
             n = numel(obj.agents);

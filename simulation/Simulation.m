@@ -8,7 +8,9 @@ classdef Simulation < handle
         eventQueue EventQueue
         eventGenerator
         eventFactory
+
         dtManager
+        rekeyManager
 
         currentTime = 0
 
@@ -33,6 +35,7 @@ classdef Simulation < handle
             obj.eventFactory = EventFactory(obj.swarm);
 
             obj.dtManager = DigitalTwinManager(obj.cfg);
+            obj.rekeyManager = RekeyManager(obj.cfg);
 
         end
 
@@ -107,7 +110,7 @@ classdef Simulation < handle
 
             for i = 1:numel(dueEvents)
 
-                dueEvents(i).execute(obj);
+                dueEvents{i}.execute(obj);
 
             end
 
@@ -159,8 +162,10 @@ classdef Simulation < handle
 
             % ------------------------------------------------------------------
             % Local Rekey
-            % (To be implemented.)
             % ------------------------------------------------------------------
+            cluster = obj.swarm.findCluster(clusterID);
+
+            obj.rekeyManager.performLocalRekey(cluster);
 
             % ------------------------------------------------------------------
             % Statistics
@@ -178,21 +183,34 @@ classdef Simulation < handle
                 return;
             end
 
-            %--------------------------------------------------------------
-            % Remove Digital Twin
-            %--------------------------------------------------------------
-            obj.dtManager.removeUAV(uavID);
+            uav = obj.swarm.findUAV(uavID);
 
-            % ------------------------------------------------------------------
-            % Remove UAV
-            % ------------------------------------------------------------------
-            obj.swarm.removeUAV(uavID);
+            clusterID = uav.clusterID;
 
+            %--------------------------------------------------------------
+            % Predict additional departures
+            %--------------------------------------------------------------
+            predictedLeaves = obj.dtManager.findUnstableUAVs(uavID);
+            predictedLeaves(end+1)=uavID;
+
+            for i = 1:numel(predictedLeaves)
+
+                predictedID = predictedLeaves(i);
+
+                obj.dtManager.removeUAV(predictedID);   % Remove Digital Twin
+
+                obj.swarm.removeUAV(predictedID);       % Remove UAV
+
+            end
 
             % ------------------------------------------------------------------
             % Predictive Batch Rekey
             % (DT enhancement will be implemented later.)
             % ------------------------------------------------------------------
+
+            cluster = obj.swarm.findCluster(clusterID);
+
+            obj.rekeyManager.performLocalRekey(cluster);
 
             % ------------------------------------------------------------------
             % Statistics
@@ -203,22 +221,32 @@ classdef Simulation < handle
 
         function processFailure(obj, uavID, reason)
 
-            
+
             decision = obj.makeFailureDecision(uavID, reason);
 
             if ~decision.approved
                 return;
             end
 
-            %--------------------------------------------------------------
-            % Remove Digital Twin
-            %--------------------------------------------------------------
-            obj.dtManager.removeUAV(uavID);
+            uav = obj.swarm.findUAV(uavID);
+
+            clusterID = uav.clusterID;
 
             %--------------------------------------------------------------
-            % Remove UAV
+            % Predict additional failure
             %--------------------------------------------------------------
-            obj.swarm.removeUAV(uavID);
+            predictedLeaves = obj.dtManager.findUnstableUAVs(uavID);
+            predictedLeaves(end+1)=uavID;
+
+            for i = 1:numel(predictedLeaves)
+
+                predictedID = predictedLeaves(i);
+
+                obj.dtManager.removeUAV(predictedID);   % Remove Digital Twin
+
+                obj.swarm.removeUAV(predictedID);       % Remove UAV
+
+            end
 
             % ------------------------------------------------------------------
             % Failure reason available for future DT logic
@@ -229,6 +257,9 @@ classdef Simulation < handle
             % Predictive Batch Rekey
             % (To be implemented.)
             % ------------------------------------------------------------------
+            cluster = obj.swarm.findCluster(clusterID);
+
+            obj.rekeyManager.performLocalRekey(cluster);
 
             % ------------------------------------------------------------------
             % Statistics
