@@ -2,8 +2,9 @@ classdef EventQueue < handle
 
     properties (Access = private)
 
-        %eventList Event = Event.empty(0,1);
-        eventList=[];
+        %eventList Event = Event.empty(1,0);
+        eventList={};
+        %eventList Event;
 
     end
 
@@ -11,26 +12,44 @@ classdef EventQueue < handle
 
         function obj = EventQueue()
 
-            %obj.eventList = Event.empty(0,1);
-            obj.eventList = [];
+            %obj.eventList = Event.empty;%(1,0);%.empty;%(0,1);
+            obj.eventList = {};
         end
 
         function schedule(obj, event)
+% 
+%             obj.eventList(end+1) = event;
+% 
+%             [~, idx] = sort([obj.eventList.time]);
+% 
+%             obj.eventList = obj.eventList(idx);
 
-            obj.eventList(end+1) = event;
-
-            [~, idx] = sort([obj.eventList.time]);
-
+            obj.eventList{end+1} = event;
+        
+            [~,idx] = sort(cellfun(@(e)e.time,obj.eventList));
+        
             obj.eventList = obj.eventList(idx);
+
 
         end
 
         function dueEvents = popDueEvents(obj, currentTime)
 
-            mask = [obj.eventList.time] <= currentTime;
-
+%             mask = [obj.eventList.time] <= currentTime;
+% 
+%             dueEvents = obj.eventList(mask);
+% 
+%             obj.eventList(mask) = [];
+            
+            if isempty(obj.eventList)
+                dueEvents = {};
+                return;
+            end
+            
+            mask = cellfun(@(e)e.time,obj.eventList) <= currentTime;
+            
             dueEvents = obj.eventList(mask);
-
+            
             obj.eventList(mask) = [];
 
         end

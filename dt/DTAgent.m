@@ -10,56 +10,43 @@ classdef DTAgent < handle
 
 
         initialized = false;
-        hasPrediction = false;
+        %hasPrediction = false;
+
+        uav
+        cfg
 
 
     end
 
     methods
 
-        function obj = DTAgent()
+        function obj = DTAgent(uav, cfg)
+
+            obj.uav = uav;
+            obj.cfg = cfg;
 
             obj.residual = 0;
             obj.stabilityScore = 0;
 
         end
 
-        function update(obj,uav,cfg)
-
-            actual = DTState(uav);
-
-            obj.predictedState = ...
-                Predictor.predict(obj.state,...
-                cfg.predictionHorizon);
-
-            obj.residual = ...
-                Residual.compute(actual,...
-                obj.predictedState);
-
-            obj.stabilityScore = ...
-                StabilityModel.compute(obj.residual);
-
-            obj.state = actual;
-
-        end
-
         %---------------------------------------
 
-        function tick(obj,uav,cfg)
+        function update(obj)
 
             if isempty(obj.predictedState)
 
-                obj.observe(uav);
+                obj.observe();
 
                 obj.predictedState = ...
                     Predictor.predict(obj.state,...
-                    cfg.predictionHorizon);
+                    obj.cfg.predictionHorizon);
 
                 return
 
             end
 
-            actual = DTState(uav);
+            actual = DTState(obj.uav);
 
             obj.residual = ...
                 Residual.compute(actual,...
@@ -72,24 +59,24 @@ classdef DTAgent < handle
 
             obj.predictedState = ...
                 Predictor.predict(actual,...
-                cfg.predictionHorizon);
+                obj.cfg.predictionHorizon);
 
         end
 
 
         function observe(obj,uav)
 
-            x= DTState(uav);
-            obj.state =x;
+           obj.state = DTState(obj.uav);
 
-            if ~obj.initialized
-                obj.initialized = true;
-            end
+           obj.initialized = true;
         end
+
         function stable = isStable(obj,cfg)
 
-            stable = StabilityModel.isStable(...
-                obj.stabilityScore,cfg);
+            stable = StabilityModel.isStable( ...
+                obj.stabilityScore, ...
+                obj.cfg);
+
 
         end
 

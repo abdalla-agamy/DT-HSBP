@@ -4,7 +4,7 @@ classdef DigitalTwinManager < handle
 
         cfg
 
-        agents DTAgent = DTAgent.empty;
+        agents  = DTAgent.empty;
 
     end
 

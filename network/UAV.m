@@ -55,7 +55,7 @@ classdef UAV < handle
 
             obj.active = true;
 
-            obj.dt = DTAgent();
+            obj.dt = DTAgent(obj,cfg);
 
             obj.dt.observe(obj);
 
