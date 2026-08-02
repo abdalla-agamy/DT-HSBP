@@ -72,11 +72,11 @@ classdef EventFactory < handle
 
             if numFailures > 0
 
-                leaveIndices = randperm(numel(remaining), numFailures);
+                failureIndices = randperm(numel(remaining), numFailures);
 
                 for i = 1:numFailures
 
-                    uav = remaining(leaveIndices(i));
+                    uav = remaining(failureIndices(i));
 
                     events{end+1} = FailureEvent( ...
                         currentTime, ...
@@ -84,7 +84,7 @@ classdef EventFactory < handle
                         "RandomFailure");
 
                 end
-                
+
             end
 
 

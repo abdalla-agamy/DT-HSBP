@@ -7,10 +7,8 @@ classdef Simulation < handle
         cfg
         eventQueue EventQueue
         eventGenerator
-        
         eventFactory
-
-
+        dtManager
 
         currentTime = 0
 
@@ -33,6 +31,8 @@ classdef Simulation < handle
             obj.eventGenerator = PoissonEventGenerator(obj.cfg);
 
             obj.eventFactory = EventFactory(obj.swarm);
+
+            obj.dtManager = DigitalTwinManager(obj.cfg);
 
         end
 
@@ -150,6 +150,10 @@ classdef Simulation < handle
             % ------------------------------------------------------------------
             obj.swarm.addUAV(uavID, clusterID);
 
+            uav = obj.swarm.findUAV(uavID);
+
+            obj.dtManager.registerUAV(uav);
+
             % ------------------------------------------------------------------
             % Local Rekey
             % (To be implemented.)
@@ -173,6 +177,11 @@ classdef Simulation < handle
                 return;
             end
 
+            obj.dtManager.removeUAV(uavID);
+
+            obj.swarm.removeUAV(uavID);
+
+
             % ------------------------------------------------------------------
             % Predictive Batch Rekey
             % (DT enhancement will be implemented later.)
@@ -195,6 +204,10 @@ classdef Simulation < handle
             if ~decision.approved
                 return;
             end
+
+            obj.dtManager.removeUAV(uavID);
+            
+            obj.swarm.removeUAV(uavID);
 
             % ------------------------------------------------------------------
             % Failure reason available for future DT logic
@@ -269,7 +282,7 @@ classdef Simulation < handle
             % TODO
         end
         function updateDigitalTwins(obj)
-            % TODO
+            obj.dtManager.update();
         end
         function performRekeying(obj)
             % TODO
