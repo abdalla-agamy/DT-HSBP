@@ -6,6 +6,7 @@ classdef Simulation < handle
         protocol
         cfg
         eventQueue EventQueue
+        eventGenerator
 
 
         currentTime = 0
@@ -26,6 +27,8 @@ classdef Simulation < handle
 
             obj.eventQueue = EventQueue();
 
+            obj.eventGenerator = PoissonEventGenerator(obj.cfg);
+
         end
 
         function step(obj)
@@ -33,8 +36,11 @@ classdef Simulation < handle
             % Advance simulation clock
             obj.currentTime = obj.currentTime + obj.cfg.timeStep;
 
-            % Process scheduled events
-            obj.processEvents();
+            % Generate stochastic events
+            eventCounts = obj.eventGenerator.generate();
+
+            % Process generated events
+            obj.processEvents(eventCounts);
 
             % Update physical UAV states
             obj.updatePhysicalWorld();
@@ -60,7 +66,7 @@ classdef Simulation < handle
 
         end
 
-        function processEvents(obj)
+        function processEvents(obj,eventCounts)
 
             dueEvents = obj.eventQueue.popDueEvents(obj.currentTime);
 
