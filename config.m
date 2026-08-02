@@ -24,6 +24,8 @@ cfg.thetaJoin    = 1.0;
 cfg.thetaLeave   = 2.5;
 cfg.thetaCluster = 3.0;
 
+cfg.stabilityThreshold = 0.60;
+
 %% ===============================
 %  Mobility
 % ================================

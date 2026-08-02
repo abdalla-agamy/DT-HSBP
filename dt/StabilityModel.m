@@ -4,7 +4,7 @@ classdef StabilityModel
 
         function score = compute(residual)
 
-            score = residual;
+            score = exp(-residual);
 
         end
 
@@ -12,7 +12,7 @@ classdef StabilityModel
 
         function stable = isStable(score,cfg)
 
-            stable = score < cfg.thetaLeave;
+            stable = score < cfg.stabilityThreshold;
 
         end
 
