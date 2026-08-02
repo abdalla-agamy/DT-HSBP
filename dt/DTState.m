@@ -2,6 +2,9 @@ classdef DTState
 
     properties
 
+        id
+        clusterID
+        
         position
         velocity
         energy
@@ -13,6 +16,9 @@ classdef DTState
     methods
 
         function obj = DTState(uav)
+
+            obj.id = uav.id;
+            obj.clusterID = uav.clusterID;
 
             obj.position = uav.position;
             obj.velocity = uav.velocity;
