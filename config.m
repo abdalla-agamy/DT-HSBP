@@ -50,6 +50,16 @@ cfg.joinRate = 0.05;    % λJ (joins/second)
 cfg.leaveRate = 0.03;    % λL (leaves/second)
 cfg.failureRate = 0.01;    % λF (failures/second)
 
+%% ===============================
+% Residual Weights
+% ===============================
+
+cfg.residualWeights.position = 1.0;
+cfg.residualWeights.velocity = 1.0;
+cfg.residualWeights.energy = 1.0;
+cfg.residualWeights.linkQuality = 1.0;
+cfg.residualWeights.keySynced = 1.0;
+
 
 cfg.randomSeed   = 42;
 

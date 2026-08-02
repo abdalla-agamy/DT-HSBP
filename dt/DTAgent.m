@@ -41,7 +41,7 @@ classdef DTAgent < handle
 
                 obj.predictedState = ...
                     Predictor.predict(obj.state,...
-                    obj.cfg.predictionHorizon,obj.cfg);
+                    obj.cfg.predictionHorizon, obj.cfg);
 
                 return
 
@@ -51,7 +51,7 @@ classdef DTAgent < handle
 
             obj.residual = ...
                 Residual.compute(actual,...
-                obj.predictedState);
+                obj.predictedState, obj.cfg);
 
             obj.stabilityScore = ...
                 StabilityModel.compute(obj.residual);
@@ -60,7 +60,7 @@ classdef DTAgent < handle
 
             obj.predictedState = ...
                 Predictor.predict(actual,...
-                obj.cfg.predictionHorizon,obj.cfg);
+                obj.cfg.predictionHorizon, obj.cfg);
 
         end
 
