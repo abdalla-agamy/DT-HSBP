@@ -5,6 +5,7 @@ classdef EventQueue < handle
         %eventList Event = Event.empty(1,0);
         eventList={};
         %eventList Event;
+%         eventList = Event.empty;
 
     end
 
@@ -14,10 +15,11 @@ classdef EventQueue < handle
 
             %obj.eventList = Event.empty;%(1,0);%.empty;%(0,1);
             obj.eventList = {};
+%             obj.eventList = Event.empty;
         end
 
         function schedule(obj, event)
-% 
+
 %             obj.eventList(end+1) = event;
 % 
 %             [~, idx] = sort([obj.eventList.time]);

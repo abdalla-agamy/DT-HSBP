@@ -33,6 +33,7 @@ classdef DTAgent < handle
         %---------------------------------------
 
         function update(obj)
+%             fprintf('DTAgent.update() called\n');
 
             if isempty(obj.predictedState)
 

@@ -18,6 +18,7 @@ classdef DigitalTwinManager < handle
 
         %----------------------------------------------------------
         function registerUAV(obj, uav)
+            %REGISTERUAV Create a Digital Twin for a UAV.
 
             agent = DTAgent(uav, obj.cfg);
 
@@ -27,6 +28,7 @@ classdef DigitalTwinManager < handle
 
         %----------------------------------------------------------
         function removeUAV(obj, uavID)
+            %REMOVEUAV Remove the Digital Twin associated with a UAV.
 
             for i = 1:numel(obj.agents)
 
@@ -44,6 +46,7 @@ classdef DigitalTwinManager < handle
 
         %----------------------------------------------------------
         function update(obj)
+            %UPDATE Update all Digital Twins.
 
             for i = 1:numel(obj.agents)
 
@@ -53,6 +56,26 @@ classdef DigitalTwinManager < handle
 
         end
 
+        %----------------------------------------------------------
+        function agent = findAgent(obj, uavID)
+
+            %FINDAGENT Return the DTAgent corresponding to a UAV.
+
+            agent = [];
+
+            for i = 1:numel(obj.agents)
+
+                if obj.agents(i).uav.id == uavID
+
+                    agent = obj.agents(i);
+
+                    return;
+
+                end
+
+            end
+
+        end
         %----------------------------------------------------------
         function n = count(obj)
 

@@ -1,4 +1,4 @@
-clear; clc;
+clear all; clc;
 clear classes
 rehash
 
@@ -10,7 +10,10 @@ swarm = Swarm(cfg);
 
 %% 1. Poisson Event Generator
 gen = PoissonEventGenerator(cfg);
-eventCounts = gen.generate();
+% eventCounts = gen.generate();
+eventCounts.join = 2;
+eventCounts.leave = 1;
+eventCounts.failure = 0;
 
 disp('===== PoissonEventGenerator =====');
 disp(eventCounts);
@@ -26,7 +29,7 @@ fprintf('%d events created.\n',numel(events));
 queue = EventQueue();
 
 for k = 1:numel(events)
-    queue.schedule(events(k));
+    queue.schedule(events{k});
 end
 
 fprintf('\n===== EventQueue =====\n');
@@ -34,6 +37,9 @@ fprintf('Queue size = %d\n',queue.count());
 
 %% 4. Pop events
 dueEvents = queue.popDueEvents(0);
+% class(dueEvents)
+% class(dueEvents{1})
+% celldisp(dueEvents)
 
 fprintf('\n===== Processing Events =====\n');
 
@@ -41,7 +47,7 @@ dtManager = DigitalTwinManager(cfg);
 
 for k = 1:numel(dueEvents)
 
-    e = dueEvents(k);
+    e = dueEvents{k};
 
     fprintf('\nEvent %d : %s\n',k,class(e));
 
