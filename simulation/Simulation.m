@@ -190,12 +190,10 @@ classdef Simulation < handle
             % ------------------------------------------------------------------
             % Remove failed UAV
             % ------------------------------------------------------------------
-            exclude = obj.makeFailureDecision(uavID);
+            decision = obj.makeFailureDecision(uavID, reason);
 
-            if exclude
-
-                obj.swarm.removeUAV(uavID);
-
+            if ~decision.approved
+                return;
             end
 
             % ------------------------------------------------------------------
@@ -250,12 +248,19 @@ classdef Simulation < handle
 
         end
 
-        function exclude  = makeFailureDecision(obj, candidateUAV)
+        function decision = makeFailureDecision(obj, uavID, reason)
+            %MAKEFAILUREDECISION Evaluate a detected UAV failure.
+            %
+            % INPUT:
+            %   uavID  - Failed UAV ID.
+            %   reason - Failure reason.
+            %
+            % OUTPUT:
+            %   decision.approved - true if the failure should be processed.
+            %   decision.reason   - Decision description.
 
-            %--------------------------------------------------------------
-            % Baseline implementation
-            %--------------------------------------------------------------
-            exclude  = true; %obj.dt.evaluateFailure(uavID);
+            decision.approved = true;
+            decision.reason = "Approved";
 
         end
 
