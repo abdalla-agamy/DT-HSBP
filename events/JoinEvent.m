@@ -1,4 +1,4 @@
-classdef JoinEvent < events.Event
+classdef JoinEvent < Event
 
     properties (SetAccess = private)
 
@@ -11,7 +11,7 @@ classdef JoinEvent < events.Event
 
         function obj = JoinEvent(time, uavID, clusterID)
 
-            obj@events.Event(time, "Join");
+            obj@Event(time, "Join");
 
             obj.uavID = uavID;
             obj.clusterID = clusterID;

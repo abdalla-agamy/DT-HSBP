@@ -1,4 +1,4 @@
-classdef FailureEvent < events.Event
+classdef FailureEvent < Event
 
     properties (SetAccess = private)
 
@@ -11,7 +11,7 @@ classdef FailureEvent < events.Event
 
         function obj = FailureEvent(time, uavID, reason)
 
-            obj@events.Event(time, "Failure");
+            obj@Event(time, "Failure");
 
             obj.uavID  = uavID;
             obj.reason = reason;

@@ -1,4 +1,4 @@
-classdef LeaveEvent < events.Event
+classdef LeaveEvent < Event
 
     properties (SetAccess = private)
 
@@ -11,7 +11,7 @@ classdef LeaveEvent < events.Event
 
         function obj = LeaveEvent(time, uavID, clusterID)
 
-            obj@events.Event(time, "Leave");
+            obj@Event(time, "Leave");
 
             obj.uavID = uavID;
             obj.clusterID = clusterID;

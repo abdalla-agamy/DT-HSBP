@@ -5,6 +5,8 @@ classdef Simulation < handle
         swarm
         protocol
         cfg
+        eventQueue EventQueue
+
 
         currentTime = 0
 
@@ -19,6 +21,10 @@ classdef Simulation < handle
             obj.protocol = protocol;
 
             obj.swarm = protocol.swarm;
+
+            obj.currentTime = 0;
+
+            obj.eventQueue = EventQueue();
 
         end
 
@@ -55,6 +61,15 @@ classdef Simulation < handle
         end
 
         function processEvents(obj)
+
+            dueEvents = obj.eventQueue.popDueEvents(obj.currentTime);
+
+            for i = 1:numel(dueEvents)
+
+                dueEvents(i).execute(obj);
+
+            end
+
         end
         function updatePhysicalWorld(obj)
         end
@@ -64,7 +79,7 @@ classdef Simulation < handle
         end
         function collectStatistics(obj)
         end
-        
+
 
     end
 
