@@ -355,6 +355,25 @@ classdef Simulation < handle
             % TODO
         end
 
+        function printStatistics(obj)
+            stats = obj.statistics.getStatistics();
+
+            fprintf('\n');
+            fprintf('========== Simulation Statistics ==========\n');
+
+            fprintf('Join Events        : %d\n', stats.joinEvents);
+            fprintf('Leave Events       : %d\n', stats.leaveEvents);
+            fprintf('Failure Events     : %d\n', stats.failureEvents);
+
+            fprintf('Predicted Leaves   : %d\n', stats.predictedLeaves);
+            fprintf('Rejected Joins     : %d\n', stats.rejectedJoins);
+
+            fprintf('Local Rekeys       : %d\n', stats.localRekeys);
+            fprintf('Batch Rekeys       : %d\n', stats.batchRekeys);
+
+            fprintf('===========================================\n');
+        end
+
 
 
 
