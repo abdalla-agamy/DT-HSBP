@@ -7,7 +7,8 @@ classdef Simulation < handle
         cfg
         eventQueue EventQueue
         eventGenerator
-
+        
+        eventFactory
 
 
 
@@ -31,40 +32,62 @@ classdef Simulation < handle
 
             obj.eventGenerator = PoissonEventGenerator(obj.cfg);
 
+            obj.eventFactory = EventFactory(obj.swarm);
+
         end
 
         function step(obj)
 
-            % Advance simulation clock
-            obj.currentTime = obj.currentTime + obj.cfg.timeStep;
-
-            % Generate stochastic events
+            %--------------------------------------------------------------
+            % 1. Generate stochastic events
+            %--------------------------------------------------------------
             eventCounts = obj.eventGenerator.generate();
 
+            %--------------------------------------------------------------
+            % 2. Convert counts into events
+            %--------------------------------------------------------------
             events = obj.eventFactory.createEvents( ...
                 eventCounts, ...
                 obj.currentTime);
 
+            %--------------------------------------------------------------
+            % 3. Schedule events
+            %--------------------------------------------------------------
             for i = 1:numel(events)
 
                 obj.eventQueue.schedule(events{i});
 
             end
 
-            % Process generated events
-            obj.processEvents(eventCounts);
+            %--------------------------------------------------------------
+            % 4. Execute scheduled events
+            %--------------------------------------------------------------
+            obj.processEvents();
 
-            % Update physical UAV states
-            obj.updatePhysicalWorld();
-
-            % Update Digital Twin models
+            %--------------------------------------------------------------
+            % 5. Update Digital Twins
+            %--------------------------------------------------------------
             obj.updateDigitalTwins();
 
-            % Execute protocol operations
-            obj.executeHSBP();
+            %--------------------------------------------------------------
+            % 6. Membership decision
+            %--------------------------------------------------------------
+            obj.updateMembership();
 
-            % Collect simulation statistics
+            %--------------------------------------------------------------
+            % 7. Predictive Batch Rekeying
+            %--------------------------------------------------------------
+            obj.performRekeying();
+
+            %--------------------------------------------------------------
+            % 8. Collect statistics
+            %--------------------------------------------------------------
             obj.collectStatistics();
+
+            %--------------------------------------------------------------
+            % 9. Advance simulation time
+            %--------------------------------------------------------------
+            obj.currentTime = obj.currentTime + obj.cfg.timeStep;
 
         end
 
@@ -116,9 +139,9 @@ classdef Simulation < handle
             % Admission Control
             % (DT-assisted admission will be implemented later.)
             % ------------------------------------------------------------------
-            accepted = true;
+            decision  = obj.makeAdmissionDecision(candidate);
 
-            if ~accepted
+            if ~decision.accepted
                 return;
             end
 
@@ -144,7 +167,13 @@ classdef Simulation < handle
             % ------------------------------------------------------------------
             % Remove UAV
             % ------------------------------------------------------------------
-            obj.swarm.removeUAV(uavID);
+            exclude = obj.makeLeaveDecision(uavID);
+
+            if exclude
+
+                obj.swarm.removeUAV(uavID);
+
+            end
 
             % ------------------------------------------------------------------
             % Predictive Batch Rekey
@@ -163,7 +192,13 @@ classdef Simulation < handle
             % ------------------------------------------------------------------
             % Remove failed UAV
             % ------------------------------------------------------------------
-            obj.swarm.removeUAV(uavID);
+            exclude = obj.makeFailureDecision(uavID);
+
+            if exclude
+
+                obj.swarm.removeUAV(uavID);
+
+            end
 
             % ------------------------------------------------------------------
             % Failure reason available for future DT logic
@@ -182,13 +217,54 @@ classdef Simulation < handle
 
         end
 
-        function updatePhysicalWorld(obj)
+        function result = makeAdmissionDecision(obj, candidateUAV)
+
+            health = obj.dt.predictHealth(candidateUAV);
+
+            if health > obj.cfg.healthThreshold
+
+                result.accepted = true;
+                result.reason = "Accepted";
+
+            else
+
+                result.accepted = false;
+                result.reason = "LowHealth";
+
+            end
+
+        end
+
+        function exclude  = makeLeaveDecision(obj, candidateUAV)
+
+            %--------------------------------------------------------------
+            % Baseline implementation
+            %--------------------------------------------------------------
+            exclude  = true; %obj.dt.evaluateDeparture(uavID);
+
+        end
+
+        function exclude  = makeFailureDecision(obj, candidateUAV)
+
+            %--------------------------------------------------------------
+            % Baseline implementation
+            %--------------------------------------------------------------
+            exclude  = true; %obj.dt.evaluateFailure(uavID);
+
+        end
+
+
+        function updateMembership(obj)
+            % TODO
         end
         function updateDigitalTwins(obj)
+            % TODO
         end
-        function executeHSBP(obj)
+        function performRekeying(obj)
+            % TODO
         end
         function collectStatistics(obj)
+            % TODO
         end
 
 

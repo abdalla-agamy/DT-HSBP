@@ -22,7 +22,7 @@ classdef FailureEvent < Event
 
             simulation.processFailure( ...
                 obj.uavID, ...
-                obj.clusterID);
+                obj.reason);
 
         end
 

@@ -20,9 +20,7 @@ classdef LeaveEvent < Event
 
         function execute(obj, simulation)
 
-            simulation.processLeaveRequest( ...
-                obj.uavID, ...
-                obj.clusterID);
+            simulation.processLeaveRequest(obj.uavID);
 
         end
 

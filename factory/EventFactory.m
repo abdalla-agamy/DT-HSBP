@@ -40,15 +40,17 @@ classdef EventFactory < handle
             %--------------------------------------------------------------
             activeUAVs = obj.swarm.getActiveUAVs();
 
+            leaveIndices = [];
+
             if ~isempty(activeUAVs)
 
                 numLeaves = min(eventCounts.leave, numel(activeUAVs));
 
-                indices = randperm(numel(activeUAVs), numLeaves);
+                leaveIndices = randperm(numel(activeUAVs), numLeaves);
 
                 for i = 1:numLeaves
 
-                    uav = activeUAVs(indices(i));
+                    uav = activeUAVs(leaveIndices(i));
 
                     events{end+1} = LeaveEvent( ...
                         currentTime, ...
@@ -64,21 +66,25 @@ classdef EventFactory < handle
             %--------------------------------------------------------------
             remaining = activeUAVs;
 
-            remaining(indices) = [];
+            remaining(leaveIndices) = [];
 
             numFailures = min(eventCounts.failure, numel(remaining));
 
-            indices = randperm(numel(remaining), numFailures);
+            if numFailures > 0
 
-            for i = 1:numFailures
+                leaveIndices = randperm(numel(remaining), numFailures);
 
-                uav = remaining(indices(i));
+                for i = 1:numFailures
 
-                events{end+1} = FailureEvent( ...
-                    currentTime, ...
-                    uav.id, ...
-                    "RandomFailure");
+                    uav = remaining(leaveIndices(i));
 
+                    events{end+1} = FailureEvent( ...
+                        currentTime, ...
+                        uav.id, ...
+                        "RandomFailure");
+
+                end
+                
             end
 
 

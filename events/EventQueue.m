@@ -2,7 +2,8 @@ classdef EventQueue < handle
 
     properties (Access = private)
 
-        eventList Event = Event.empty;
+        %eventList Event = Event.empty(0,1);
+        eventList=[];
 
     end
 
@@ -10,7 +11,8 @@ classdef EventQueue < handle
 
         function obj = EventQueue()
 
-            obj.eventList = Event.empty;
+            %obj.eventList = Event.empty(0,1);
+            obj.eventList = [];
         end
 
         function schedule(obj, event)
@@ -25,11 +27,11 @@ classdef EventQueue < handle
 
         function dueEvents = popDueEvents(obj, currentTime)
 
-            dueEvents = obj.eventQueue.popDueEvents(obj.currentTime);
+            mask = [obj.eventList.time] <= currentTime;
 
-            for i = 1:numel(dueEvents)
-                dueEvents(i).execute(obj);
-            end
+            dueEvents = obj.eventList(mask);
+
+            obj.eventList(mask) = [];
 
         end
 
