@@ -150,6 +150,9 @@ classdef Simulation < handle
             % ------------------------------------------------------------------
             obj.swarm.addUAV(uavID, clusterID);
 
+            %--------------------------------------------------------------
+            % Register Digital Twin
+            %--------------------------------------------------------------
             uav = obj.swarm.findUAV(uavID);
 
             obj.dtManager.registerUAV(uav);
@@ -168,17 +171,21 @@ classdef Simulation < handle
 
         function processLeaveRequest(obj, uavID)
 
-            % ------------------------------------------------------------------
-            % Remove UAV
-            % ------------------------------------------------------------------
+
             decision = obj.makeLeaveDecision(uavID);
 
             if ~decision.approved
                 return;
             end
 
+            %--------------------------------------------------------------
+            % Remove Digital Twin
+            %--------------------------------------------------------------
             obj.dtManager.removeUAV(uavID);
 
+            % ------------------------------------------------------------------
+            % Remove UAV
+            % ------------------------------------------------------------------
             obj.swarm.removeUAV(uavID);
 
 
@@ -196,17 +203,21 @@ classdef Simulation < handle
 
         function processFailure(obj, uavID, reason)
 
-            % ------------------------------------------------------------------
-            % Remove failed UAV
-            % ------------------------------------------------------------------
+            
             decision = obj.makeFailureDecision(uavID, reason);
 
             if ~decision.approved
                 return;
             end
 
+            %--------------------------------------------------------------
+            % Remove Digital Twin
+            %--------------------------------------------------------------
             obj.dtManager.removeUAV(uavID);
-            
+
+            %--------------------------------------------------------------
+            % Remove UAV
+            %--------------------------------------------------------------
             obj.swarm.removeUAV(uavID);
 
             % ------------------------------------------------------------------
