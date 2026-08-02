@@ -41,7 +41,7 @@ classdef DTAgent < handle
 
                 obj.predictedState = ...
                     Predictor.predict(obj.state,...
-                    obj.cfg.predictionHorizon);
+                    obj.cfg.predictionHorizon,obj.cfg);
 
                 return
 
@@ -60,7 +60,7 @@ classdef DTAgent < handle
 
             obj.predictedState = ...
                 Predictor.predict(actual,...
-                obj.cfg.predictionHorizon);
+                obj.cfg.predictionHorizon,obj.cfg);
 
         end
 

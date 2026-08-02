@@ -18,6 +18,7 @@ cfg.generator    = 5;
 % ================================
 cfg.dtInterval   = 1.0;       % DT update period (s)
 cfg.predictionHorizon = 1.0;  % Prediction window
+cfg.energyConsumptionRate = 0.1;
 
 cfg.thetaJoin    = 1.0;
 cfg.thetaLeave   = 2.5;

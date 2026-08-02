@@ -2,7 +2,7 @@ classdef Predictor
 
     methods (Static)
 
-        function predicted = predict(state, dt)
+        function predicted = predict(state, dt, cfg)
 
             predicted = state;
 
@@ -12,7 +12,7 @@ classdef Predictor
 
             % Energy consumption model
             predicted.energy = ...
-                max(0, state.energy - 0.1 * dt);
+                max(0, state.energy - cfg.energyConsumptionRate * dt);
 
             % Link quality assumed unchanged
             predicted.linkQuality = state.linkQuality;
