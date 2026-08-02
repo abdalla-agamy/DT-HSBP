@@ -167,12 +167,10 @@ classdef Simulation < handle
             % ------------------------------------------------------------------
             % Remove UAV
             % ------------------------------------------------------------------
-            exclude = obj.makeLeaveDecision(uavID);
+            decision = obj.makeLeaveDecision(uavID);
 
-            if exclude
-
-                obj.swarm.removeUAV(uavID);
-
+            if ~decision.approved
+                return;
             end
 
             % ------------------------------------------------------------------
@@ -235,12 +233,20 @@ classdef Simulation < handle
 
         end
 
-        function exclude  = makeLeaveDecision(obj, candidateUAV)
+        function decision = makeLeaveDecision(obj, uavID)
+            %MAKELEAVEDECISION Evaluate whether a leave request should be processed.
+            %
+            % INPUT:
+            %   uavID - UAV requesting to leave.
+            %
+            % OUTPUT:
+            %   decision.approved - true if the leave request is approved.
+            %   decision.reason   - Text describing the decision.
 
-            %--------------------------------------------------------------
-            % Baseline implementation
-            %--------------------------------------------------------------
-            exclude  = true; %obj.dt.evaluateDeparture(uavID);
+            
+
+            decision.approved = true;
+            decision.reason = "Approved";
 
         end
 
