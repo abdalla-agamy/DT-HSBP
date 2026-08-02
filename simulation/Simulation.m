@@ -12,6 +12,7 @@ classdef Simulation < handle
         dtManager
         rekeyManager
 
+        statistics
         currentTime = 0
 
     end
@@ -36,6 +37,8 @@ classdef Simulation < handle
 
             obj.dtManager = DigitalTwinManager(obj.cfg);
             obj.rekeyManager = RekeyManager(obj.cfg);
+
+            obj.statistics = StatisticsManager();
 
         end
 
@@ -145,6 +148,7 @@ classdef Simulation < handle
             decision  = obj.makeAdmissionDecision(candidate);
 
             if ~decision.accepted
+                obj.statistics.incrementRejectedJoin();
                 return;
             end
 
@@ -169,8 +173,11 @@ classdef Simulation < handle
 
             % ------------------------------------------------------------------
             % Statistics
-            % (To be implemented.)
             % ------------------------------------------------------------------
+            obj.statistics.incrementJoin();
+            
+            obj.statistics.recordRekey(false);
+            
 
         end
 
@@ -205,7 +212,6 @@ classdef Simulation < handle
 
             % ------------------------------------------------------------------
             % Predictive Batch Rekey
-            % (DT enhancement will be implemented later.)
             % ------------------------------------------------------------------
 
             cluster = obj.swarm.findCluster(clusterID);
@@ -214,8 +220,16 @@ classdef Simulation < handle
 
             % ------------------------------------------------------------------
             % Statistics
-            % (To be implemented.)
             % ------------------------------------------------------------------
+            obj.statistics.incrementLeave();
+            obj.statistics.incrementPredictedLeaves( ...
+                numel(predictedLeaves)-1);
+
+            if ~isempty(predictedLeaves)
+                obj.statistics.recordRekey(true);
+            else
+                obj.statistics.recordRekey(false);
+            end
 
         end
 
@@ -263,8 +277,16 @@ classdef Simulation < handle
 
             % ------------------------------------------------------------------
             % Statistics
-            % (To be implemented.)
             % ------------------------------------------------------------------
+            obj.statistics.incrementFailure();
+            obj.statistics.incrementPredictedLeaves( ...
+                numel(predictedLeaves)-1);
+
+            if ~isempty(predictedLeaves)
+                obj.statistics.recordRekey(true);
+            else
+                obj.statistics.recordRekey(false);
+            end
 
         end
 
