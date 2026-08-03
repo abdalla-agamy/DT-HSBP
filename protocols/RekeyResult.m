@@ -19,6 +19,14 @@ classdef RekeyResult
         messagesSent = 0
 
         encryptions = 0
+        %----------------------------------------------------------
+        % Cryptographic Operations
+        %----------------------------------------------------------
+        decryptions = 0
+
+        hashOperations = 0
+
+        randomNumbers = 0
 
     end
 

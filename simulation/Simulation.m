@@ -360,6 +360,19 @@ classdef Simulation < handle
 
             fprintf('Communication Cost: %.0f\n', ...
                 stats.communicationCost);
+            
+            fprintf('Encryptions       : %d\n', ...
+                stats.totalEncryptions);
+
+            fprintf('Decryptions       : %d\n', ...
+                stats.totalDecryptions);
+
+            fprintf('Hash Operations   : %d\n', ...
+                stats.totalHashOperations);
+
+            fprintf('Random Numbers    : %d\n', ...
+                stats.totalRandomNumbers);
+
 
             fprintf('===========================================\n');
         end

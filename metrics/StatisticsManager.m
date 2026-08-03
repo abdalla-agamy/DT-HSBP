@@ -31,6 +31,10 @@ classdef StatisticsManager < handle
         totalBytes = 0
         communicationCost = 0
         averageMessageSize = 0
+        %-------------------------------
+        totalDecryptions = 0
+        totalHashOperations = 0
+        totalRandomNumbers = 0
 
     end
 
@@ -104,6 +108,15 @@ classdef StatisticsManager < handle
             obj.communicationCost = ...
                 obj.totalBytes;
 
+            obj.totalDecryptions = ...
+                obj.totalDecryptions + result.decryptions;
+
+            obj.totalHashOperations = ...
+                obj.totalHashOperations + result.hashOperations;
+
+            obj.totalRandomNumbers = ...
+                obj.totalRandomNumbers + result.randomNumbers;
+
             if isBatch
                 obj.batchRekeys = obj.batchRekeys + 1;
             else
@@ -165,6 +178,10 @@ classdef StatisticsManager < handle
             stats.totalBytes = obj.totalBytes;
             stats.communicationCost = obj.communicationCost;
 
+            stats.totalDecryptions = obj.totalDecryptions;
+            stats.totalHashOperations = obj.totalHashOperations;
+            stats.totalRandomNumbers = obj.totalRandomNumbers;
+
         end
 
         function reset(obj)
@@ -186,6 +203,8 @@ classdef StatisticsManager < handle
 
             obj.totalBytes = 0;
             obj.communicationCost = 0;
+
+            
             
 
         end

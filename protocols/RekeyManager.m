@@ -44,6 +44,12 @@ classdef RekeyManager < handle
 
             result.encryptions = result.numAffected;
 
+            result.decryptions = result.numAffected;
+
+            result.hashOperations = result.numAffected;
+
+            result.randomNumbers = 1;
+
             %--------------------------------------------------------------
             % Internal statistics
             %--------------------------------------------------------------
