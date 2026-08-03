@@ -34,7 +34,7 @@ classdef Cluster < handle
 
             removed = false;
 
-            for i = 1:length(obj.members)
+            for i = 1:length(obj.uavs)
 
                 if obj.uavs(i).id == uavID
 

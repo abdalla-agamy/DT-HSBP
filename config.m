@@ -48,9 +48,9 @@ cfg.simulationTime = 100;     % Seconds
 %% ===============================
 % Stochastic Event Model
 % ================================
-cfg.joinRate = 0.05;    % λJ (joins/second)
-cfg.leaveRate = 0.03;    % λL (leaves/second)
-cfg.failureRate = 0.01;    % λF (failures/second)
+cfg.joinRate = 0.5;    % λJ (joins/second)
+cfg.leaveRate = 0.3;    % λL (leaves/second)
+cfg.failureRate = 0.1;    % λF (failures/second)
 
 %% ===============================
 % Residual Weights

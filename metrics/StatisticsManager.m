@@ -63,11 +63,16 @@ classdef StatisticsManager < handle
 
         function recordRekey(obj, isBatch)
 
-            obj.localRekeys = ...
-                obj.localRekeys + 1;
+%             obj.localRekeys = ...
+%                 obj.localRekeys + 1;
+%             if isBatch
+%                 obj.batchRekeys = ...
+%                     obj.batchRekeys + 1;
+%             end
             if isBatch
-                obj.batchRekeys = ...
-                    obj.batchRekeys + 1;
+                obj.batchRekeys = obj.batchRekeys + 1;
+            else
+                obj.localRekeys = obj.localRekeys + 1;
             end
 
         end

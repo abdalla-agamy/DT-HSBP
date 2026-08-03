@@ -75,20 +75,6 @@ classdef Simulation < handle
             %--------------------------------------------------------------
             obj.updateDigitalTwins();
 
-            %--------------------------------------------------------------
-            % 6. Membership decision
-            %--------------------------------------------------------------
-            obj.updateMembership();
-
-            %--------------------------------------------------------------
-            % 7. Predictive Batch Rekeying
-            %--------------------------------------------------------------
-            obj.performRekeying();
-
-            %--------------------------------------------------------------
-            % 8. Collect statistics
-            %--------------------------------------------------------------
-            obj.collectStatistics();
 
             %--------------------------------------------------------------
             % 9. Advance simulation time
@@ -107,7 +93,7 @@ classdef Simulation < handle
 
         end
 
-        function processEvents(obj,eventCounts)
+        function processEvents(obj)
 
             dueEvents = obj.eventQueue.popDueEvents(obj.currentTime);
 
@@ -119,32 +105,14 @@ classdef Simulation < handle
 
         end
 
-        function createEvents(obj, eventCounts)
-
-            for i = 1:eventCounts.join
-
-                uavID = obj.swarm.allocateUAVID();
-
-                % Cluster selection (temporary)
-                clusterID = 1;
-
-                event = JoinEvent( ...
-                    obj.currentTime, ...
-                    uavID, ...
-                    clusterID);
-
-                obj.eventQueue.schedule(event);
-
-            end
-
-        end
 
         function processJoinRequest(obj, uavID, clusterID)
 
             % ------------------------------------------------------------------
             % Admission Control
-            % (DT-assisted admission will be implemented later.)
             % ------------------------------------------------------------------
+            candidate.id=uavID;
+            candidate.cluster=clusterID;
             decision  = obj.makeAdmissionDecision(candidate);
 
             if ~decision.accepted
@@ -175,9 +143,7 @@ classdef Simulation < handle
             % Statistics
             % ------------------------------------------------------------------
             obj.statistics.incrementJoin();
-            
-            obj.statistics.recordRekey(false);
-            
+            obj.statistics.recordRekey(false);            
 
         end
 
@@ -198,7 +164,6 @@ classdef Simulation < handle
             % Predict additional departures
             %--------------------------------------------------------------
             predictedLeaves = obj.dtManager.findUnstableUAVs(uavID);
-            predictedLeaves(end+1)=uavID;
 
             for i = 1:numel(predictedLeaves)
 
@@ -210,6 +175,18 @@ classdef Simulation < handle
 
             end
 
+            %------------------------------------------------------------------
+            % Remove Digital Twin
+            %------------------------------------------------------------------
+
+            obj.dtManager.removeUAV(uavID);  
+
+            %------------------------------------------------------------------
+            % Remove UAV
+            %------------------------------------------------------------------
+
+            obj.swarm.removeUAV(uavID);       
+
             % ------------------------------------------------------------------
             % Predictive Batch Rekey
             % ------------------------------------------------------------------
@@ -220,14 +197,14 @@ classdef Simulation < handle
 
             % ------------------------------------------------------------------
             % Statistics
-            % ------------------------------------------------------------------
-            obj.statistics.incrementLeave();
-            obj.statistics.incrementPredictedLeaves( ...
-                numel(predictedLeaves)-1);
+            % -----------------------------------------------------------------
 
             if ~isempty(predictedLeaves)
+                obj.statistics.incrementPredictedLeaves( ...
+                    numel(predictedLeaves));
                 obj.statistics.recordRekey(true);
             else
+                obj.statistics.incrementLeave();
                 obj.statistics.recordRekey(false);
             end
 
@@ -250,7 +227,6 @@ classdef Simulation < handle
             % Predict additional failure
             %--------------------------------------------------------------
             predictedLeaves = obj.dtManager.findUnstableUAVs(uavID);
-            predictedLeaves(end+1)=uavID;
 
             for i = 1:numel(predictedLeaves)
 
@@ -261,6 +237,17 @@ classdef Simulation < handle
                 obj.swarm.removeUAV(predictedID);       % Remove UAV
 
             end
+            %------------------------------------------------------------------
+            % Remove Digital Twin
+            %------------------------------------------------------------------
+
+            obj.dtManager.removeUAV(uavID);  
+
+            %------------------------------------------------------------------
+            % Remove UAV
+            %------------------------------------------------------------------
+
+            obj.swarm.removeUAV(uavID);       
 
             % ------------------------------------------------------------------
             % Failure reason available for future DT logic
@@ -278,13 +265,13 @@ classdef Simulation < handle
             % ------------------------------------------------------------------
             % Statistics
             % ------------------------------------------------------------------
-            obj.statistics.incrementFailure();
-            obj.statistics.incrementPredictedLeaves( ...
-                numel(predictedLeaves)-1);
 
             if ~isempty(predictedLeaves)
+                obj.statistics.incrementPredictedLeaves( ...
+                    numel(predictedLeaves));
                 obj.statistics.recordRekey(true);
             else
+                obj.statistics.incrementFailure();
                 obj.statistics.recordRekey(false);
             end
 
@@ -292,19 +279,21 @@ classdef Simulation < handle
 
         function result = makeAdmissionDecision(obj, candidateUAV)
 
-            health = obj.dt.predictHealth(candidateUAV);
-
-            if health > obj.cfg.healthThreshold
-
-                result.accepted = true;
-                result.reason = "Accepted";
-
-            else
-
-                result.accepted = false;
-                result.reason = "LowHealth";
-
-            end
+%             health = obj.dtManager.predictHealth(candidateUAV);
+% 
+%             if health > obj.cfg.healthThreshold
+% 
+%                 result.accepted = true;
+%                 result.reason = "Accepted";
+% 
+%             else
+% 
+%                 result.accepted = false;
+%                 result.reason = "LowHealth";
+% 
+%             end
+            result.accepted = true;
+            result.reason = "Accepted";
 
         end
 
@@ -342,18 +331,10 @@ classdef Simulation < handle
         end
 
 
-        function updateMembership(obj)
-            % TODO
-        end
         function updateDigitalTwins(obj)
             obj.dtManager.update();
         end
-        function performRekeying(obj)
-            % TODO
-        end
-        function collectStatistics(obj)
-            % TODO
-        end
+
 
         function printStatistics(obj)
             stats = obj.statistics.getStatistics();
