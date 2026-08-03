@@ -33,9 +33,17 @@ cfg.maxVelocity  = 20;        % m/s
 cfg.areaX        = 1000;
 cfg.areaY        = 1000;
 
-%% ===============================
-%  Communication
-% ================================
+%% ============================================================
+% Communication Cost Model
+% ============================================================
+
+cfg.keySize = 32;          % bytes (256-bit symmetric key)
+cfg.headerSize = 16;       % bytes
+cfg.controlSize = 8;       % bytes
+cfg.messageSize = ...
+    cfg.headerSize + ...
+    cfg.controlSize + ...
+    cfg.keySize;
 cfg.packetSize   = 256;       % Bytes
 cfg.mtu          = 1500;      % Bytes
 

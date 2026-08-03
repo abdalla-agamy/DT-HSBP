@@ -38,7 +38,7 @@ classdef Simulation < handle
             obj.dtManager = DigitalTwinManager(obj.cfg);
             obj.rekeyManager = RekeyManager(obj.cfg);
 
-            obj.statistics = StatisticsManager();
+            obj.statistics = StatisticsManager(obj.cfg);
 
         end
 
@@ -137,13 +137,13 @@ classdef Simulation < handle
             % ------------------------------------------------------------------
             cluster = obj.swarm.findCluster(clusterID);
 
-            obj.rekeyManager.performLocalRekey(cluster);
+            rekeyResult = obj.rekeyManager.performLocalRekey(cluster);
 
             % ------------------------------------------------------------------
             % Statistics
             % ------------------------------------------------------------------
             obj.statistics.incrementJoin();
-            obj.statistics.recordRekey(false);            
+            obj.statistics.recordRekey(false, rekeyResult);            
 
         end
 
@@ -193,7 +193,7 @@ classdef Simulation < handle
 
             cluster = obj.swarm.findCluster(clusterID);
 
-            obj.rekeyManager.performLocalRekey(cluster);
+            rekeyResult = obj.rekeyManager.performLocalRekey(cluster);
 
             % ------------------------------------------------------------------
             % Statistics
@@ -202,10 +202,10 @@ classdef Simulation < handle
             if ~isempty(predictedLeaves)
                 obj.statistics.incrementPredictedLeaves( ...
                     numel(predictedLeaves));
-                obj.statistics.recordRekey(true);
+                obj.statistics.recordRekey(true, rekeyResult);
             else
                 obj.statistics.incrementLeave();
-                obj.statistics.recordRekey(false);
+                obj.statistics.recordRekey(false, rekeyResult);
             end
 
         end
@@ -260,7 +260,7 @@ classdef Simulation < handle
             % ------------------------------------------------------------------
             cluster = obj.swarm.findCluster(clusterID);
 
-            obj.rekeyManager.performLocalRekey(cluster);
+            rekeyResult = obj.rekeyManager.performLocalRekey(cluster);
 
             % ------------------------------------------------------------------
             % Statistics
@@ -269,10 +269,10 @@ classdef Simulation < handle
             if ~isempty(predictedLeaves)
                 obj.statistics.incrementPredictedLeaves( ...
                     numel(predictedLeaves));
-                obj.statistics.recordRekey(true);
+                obj.statistics.recordRekey(true, rekeyResult);
             else
                 obj.statistics.incrementFailure();
-                obj.statistics.recordRekey(false);
+                obj.statistics.recordRekey(false, rekeyResult);
             end
 
         end
@@ -351,6 +351,15 @@ classdef Simulation < handle
 
             fprintf('Local Rekeys       : %d\n', stats.localRekeys);
             fprintf('Batch Rekeys       : %d\n', stats.batchRekeys);
+
+            fprintf('Messages Sent     : %d\n', ...
+                stats.totalMessages);
+
+            fprintf('Bytes Transmitted : %d\n', ...
+                stats.totalBytes);
+
+            fprintf('Communication Cost: %.0f\n', ...
+                stats.communicationCost);
 
             fprintf('===========================================\n');
         end

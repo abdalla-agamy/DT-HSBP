@@ -2,6 +2,8 @@ classdef StatisticsManager < handle
 
     properties (Access = private)
 
+        cfg
+
         %-------------------------------
         % Events
         %-------------------------------
@@ -21,9 +23,24 @@ classdef StatisticsManager < handle
         localRekeys = 0
         batchRekeys = 0
 
+        %-------------------------------
+        totalMessages = 0
+        totalEncryptions = 0
+        totalKeysGenerated = 0
+        %-------------------------------
+        totalBytes = 0
+        communicationCost = 0
+        averageMessageSize = 0
+
     end
 
     methods
+
+        function obj = StatisticsManager(cfg)
+
+            obj.cfg = cfg;
+
+        end
 
         function incrementJoin(obj)
 
@@ -61,7 +78,7 @@ classdef StatisticsManager < handle
 
         end
 
-        function recordRekey(obj, isBatch)
+        function recordRekey(obj, isBatch, result)
 
 %             obj.localRekeys = ...
 %                 obj.localRekeys + 1;
@@ -69,6 +86,24 @@ classdef StatisticsManager < handle
 %                 obj.batchRekeys = ...
 %                     obj.batchRekeys + 1;
 %             end
+            obj.totalMessages = ...
+                obj.totalMessages + result.messagesSent;
+
+            obj.totalEncryptions = ...
+                obj.totalEncryptions + result.encryptions;
+
+            obj.totalKeysGenerated = ...
+                obj.totalKeysGenerated + result.keysGenerated;
+
+            messageBytes = ...
+                result.messagesSent * obj.cfg.messageSize;
+
+            obj.totalBytes = ...
+                obj.totalBytes + messageBytes;
+
+            obj.communicationCost = ...
+                obj.totalBytes;
+
             if isBatch
                 obj.batchRekeys = obj.batchRekeys + 1;
             else
@@ -123,6 +158,13 @@ classdef StatisticsManager < handle
             stats.predictedLeaves = obj.predictedLeaves;
             stats.rejectedJoins = obj.rejectedJoins;
 
+            stats.totalMessages = obj.totalMessages;
+            stats.totalEncryptions = obj.totalEncryptions;
+            stats.totalKeysGenerated = obj.totalKeysGenerated;
+
+            stats.totalBytes = obj.totalBytes;
+            stats.communicationCost = obj.communicationCost;
+
         end
 
         function reset(obj)
@@ -137,6 +179,14 @@ classdef StatisticsManager < handle
 
             obj.localRekeys = 0;
             obj.batchRekeys = 0;
+
+            obj.totalMessages = 0;
+            obj.totalEncryptions = 0;
+            obj.totalKeysGenerated = 0;
+
+            obj.totalBytes = 0;
+            obj.communicationCost = 0;
+            
 
         end
         

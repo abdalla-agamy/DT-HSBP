@@ -17,8 +17,36 @@ classdef RekeyManager < handle
         end
 
         %----------------------------------------------------------
-        function performLocalRekey(obj, cluster)
+        function result = performLocalRekey(obj, cluster)
 
+            %--------------------------------------------------------------
+            % Create result object
+            %--------------------------------------------------------------
+            result = RekeyResult();
+
+            result.clusterID = cluster.id;
+
+            %--------------------------------------------------------------
+            % Determine affected UAVs
+            %--------------------------------------------------------------
+            activeUAVs = cluster.getActiveUAVs();
+
+            result.affectedUAVs = activeUAVs;
+
+            result.numAffected = numel(activeUAVs);
+
+            %--------------------------------------------------------------
+            % Protocol metrics
+            %--------------------------------------------------------------
+            result.keysGenerated = 1;
+
+            result.messagesSent = result.numAffected;
+
+            result.encryptions = result.numAffected;
+
+            %--------------------------------------------------------------
+            % Internal statistics
+            %--------------------------------------------------------------
             obj.totalRekeys = obj.totalRekeys + 1;
 
         end
