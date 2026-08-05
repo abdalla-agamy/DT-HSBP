@@ -47,6 +47,8 @@ classdef FlatSBP < Protocol
 
             FailureEvent.execute(obj.swarm,uavID);
 
+            obj.addCost(obj.swarm.totalUAVs());
+
             obj.recordFailure();
 
         end

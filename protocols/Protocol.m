@@ -8,6 +8,18 @@ classdef (Abstract) Protocol < handle
         engine
     end
 
+    methods (Abstract)
+
+        initialize(obj)
+
+        join(obj,clusterID)
+
+        leave(obj,uavID)
+
+        failure(obj,uavID)
+
+    end
+
     methods
 
         function obj = Protocol(swarm)
@@ -51,16 +63,6 @@ classdef (Abstract) Protocol < handle
 
     end
 
-    methods (Abstract)
-
-        initialize(obj)
-
-        join(obj,clusterID)
-
-        leave(obj,uavID)
-
-        failure(obj,uavID)
-
-    end
+    
 
 end
