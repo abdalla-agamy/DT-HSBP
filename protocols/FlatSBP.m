@@ -20,7 +20,20 @@ classdef FlatSBP < Protocol
 
         function join(obj,clusterID)
 
-            JoinEvent.execute(obj.swarm,clusterID);
+            uavID = obj.swarm.allocateUAVID();
+
+            obj.swarm.addUAV(uavID,clusterID);
+
+            allUAVs = obj.swarm.getActiveUAVs();
+
+            newGroupKey = obj.engine.generateGroupKey(allUAVs);
+
+            for i = 1:numel(allUAVs)
+
+                allUAVs(i).groupKey = newGroupKey;
+                allUAVs(i).keySynced = true;
+
+            end
 
             obj.addCost(obj.swarm.totalUAVs());
 
@@ -32,12 +45,32 @@ classdef FlatSBP < Protocol
 
         function leave(obj,uavID)
 
-            LeaveEvent.execute(obj.swarm,uavID);
+            uav = obj.swarm.findUAV(uavID);
+
+            if isempty(uav)
+                return;
+            end
+
+            obj.swarm.removeUAV(uavID);
+
+            allUAVs = obj.swarm.getActiveUAVs();
+
+            if ~isempty(allUAVs)
+
+                newGroupKey = obj.engine.generateGroupKey(allUAVs);
+
+                for i = 1:numel(allUAVs)
+
+                    allUAVs(i).groupKey = newGroupKey;
+                    allUAVs(i).keySynced = true;
+
+                end
+
+            end
 
             obj.addCost(obj.swarm.totalUAVs());
 
             obj.recordLeave();
-
 
         end
 
@@ -45,7 +78,28 @@ classdef FlatSBP < Protocol
 
         function failure(obj,uavID)
 
-            FailureEvent.execute(obj.swarm,uavID);
+            uav = obj.swarm.findUAV(uavID);
+
+            if isempty(uav)
+                return;
+            end
+
+            obj.swarm.removeUAV(uavID);
+
+            allUAVs = obj.swarm.getActiveUAVs();
+
+            if ~isempty(allUAVs)
+
+                newGroupKey = obj.engine.generateGroupKey(allUAVs);
+
+                for i = 1:numel(allUAVs)
+
+                    allUAVs(i).groupKey = newGroupKey;
+                    allUAVs(i).keySynced = true;
+
+                end
+
+            end
 
             obj.addCost(obj.swarm.totalUAVs());
 
