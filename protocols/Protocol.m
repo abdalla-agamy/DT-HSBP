@@ -12,7 +12,7 @@ classdef (Abstract) Protocol < handle
 
         initialize(obj)
 
-        join(obj,clusterID)
+        join(obj,uavID,clusterID)
 
         leave(obj,uavID)
 

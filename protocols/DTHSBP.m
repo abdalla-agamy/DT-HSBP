@@ -17,86 +17,81 @@ classdef DTHSBP < HSBP
 
         %--------------------------------------------
 
-        function join(obj, clusterID)
+        function join(obj,uavID,clusterID)
 
-    cfg = obj.cfg;
+            cfg = obj.cfg;
 
-    % Create candidate UAV
-    newID = obj.swarm.nextUAVID;
+            % Create candidate UAV using the ID reserved by EventFactory
+            candidate = UAV(uavID,clusterID,cfg);
 
-    candidate = UAV(newID, clusterID, cfg);
+            % DT evaluation
+            candidate.dt.update();
 
-    % DT evaluation
-    candidate.dt.update();
+            if StabilityModel.canJoin( ...
+                    candidate.dt.stabilityScore, ...
+                    cfg)
 
-    if StabilityModel.canJoin( ...
-            candidate.dt.stabilityScore, ...
-            cfg)
+                obj.swarm.clusters(clusterID).addUAV(candidate);
 
-        % Accept UAV
-        obj.swarm.nextUAVID = obj.swarm.nextUAVID + 1;
+                % Rekey affected cluster
+                cluster = obj.swarm.findCluster(clusterID);
 
-        obj.swarm.clusters(clusterID).addUAV(candidate);
+                activeUAVs = cluster.getActiveUAVs();
 
-        % Rekey affected cluster
-        cluster = obj.swarm.findCluster(clusterID);
+                newGroupKey = ...
+                    obj.engine.generateGroupKey(activeUAVs);
 
-        activeUAVs = cluster.getActiveUAVs();
+                cluster.groupKey = newGroupKey;
 
-        newGroupKey = ...
-            obj.engine.generateGroupKey(activeUAVs);
+                for i = 1:numel(activeUAVs)
 
-        cluster.groupKey = newGroupKey;
+                    activeUAVs(i).groupKey = newGroupKey;
+                    activeUAVs(i).keySynced = true;
 
-        for i = 1:numel(activeUAVs)
+                end
 
-            activeUAVs(i).groupKey = newGroupKey;
-            activeUAVs(i).keySynced = true;
+                obj.addCost(cluster.count());
+
+                obj.recordJoin();
+
+            else
+
+                fprintf("Join rejected by DT.\n");
+
+            end
 
         end
-
-        obj.addCost(cluster.count());
-
-        obj.recordJoin();
-
-    else
-
-        fprintf("Join rejected by DT.\n");
-
-    end
-
-end
 
         %--------------------------------------------
 
         function leave(obj,uavID)
 
-    u = obj.swarm.findUAV(uavID);
+            u = obj.swarm.findUAV(uavID);
 
-    if isempty(u)
-        return;
-    end
+            if isempty(u)
+                return;
+            end
 
-    if u.dt.stabilityScore > obj.cfg.thetaLeave
+            if u.dt.stabilityScore > obj.cfg.thetaLeave
 
-        fprintf("DT detected unstable UAV %d\n",u.id);
+                fprintf("DT detected unstable UAV %d\n",u.id);
 
-    end
+            end
 
-    leave@HSBP(obj,uavID);
+            leave@HSBP(obj,uavID);
 
-end
+        end
 
         %--------------------------------------------
 
-%         function failure(obj,uavID)
-% 
-%             FailureEvent.execute(obj.swarm,uavID);
-% 
-%             obj.metrics.failures = ...
-%                 obj.metrics.failures + 1;
-% 
-%         end
+        %         function failure(obj,uavID)
+        %
+        %             FailureEvent.execute(obj.swarm,uavID);
+        %
+        %             obj.metrics.failures = ...
+        %                 obj.metrics.failures + 1;
+        %
+        %         end
 
     end
 

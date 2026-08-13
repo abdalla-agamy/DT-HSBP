@@ -18,9 +18,7 @@ classdef HSBP < Protocol
 
         %--------------------------------------------
 
-        function join(obj,clusterID)
-
-            uavID = obj.swarm.allocateUAVID();
+        function join(obj,uavID,clusterID)
 
             obj.swarm.addUAV(uavID,clusterID);
 
