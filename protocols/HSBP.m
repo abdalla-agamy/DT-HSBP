@@ -20,12 +20,24 @@ classdef HSBP < Protocol
 
         function join(obj,clusterID)
 
-            JoinEvent.execute(obj.swarm,clusterID);
+            uavID = obj.swarm.allocateUAVID();
 
-            cluster = obj.swarm.clusters(clusterID);
+            obj.swarm.addUAV(uavID,clusterID);
 
-            cluster.groupKey = ...
-                obj.engine.generateGroupKey(cluster.uavs);
+            cluster = obj.swarm.findCluster(clusterID);
+
+            activeUAVs = cluster.getActiveUAVs();
+
+            newGroupKey = obj.engine.generateGroupKey(activeUAVs);
+
+            cluster.groupKey = newGroupKey;
+
+            for i = 1:numel(activeUAVs)
+
+                activeUAVs(i).groupKey = newGroupKey;
+                activeUAVs(i).keySynced = true;
+
+            end
 
             obj.addCost(cluster.count());
 
@@ -45,20 +57,34 @@ classdef HSBP < Protocol
 
             clusterID = u.clusterID;
 
-            LeaveEvent.execute(obj.swarm,uavID);
+            obj.swarm.removeUAV(uavID);
 
-            cluster = obj.swarm.clusters(clusterID);
+            cluster = obj.swarm.findCluster(clusterID);
 
+            activeUAVs = cluster.getActiveUAVs();
 
-            cluster.groupKey = ...
-                obj.engine.generateGroupKey(cluster.uavs);
+            if ~isempty(activeUAVs)
 
-            n = cluster.count();
+                newGroupKey = obj.engine.generateGroupKey(activeUAVs);
 
-            obj.metrics.addCommunication(n);
-            obj.metrics.addComputation(n);
+                cluster.groupKey = newGroupKey;
 
-            obj.metrics.leaves = obj.metrics.leaves + 1;
+                for i = 1:numel(activeUAVs)
+
+                    activeUAVs(i).groupKey = newGroupKey;
+                    activeUAVs(i).keySynced = true;
+
+                end
+
+            else
+
+                cluster.groupKey = [];
+
+            end
+
+            obj.addCost(cluster.count());
+
+            obj.recordLeave();
 
         end
 
@@ -66,10 +92,42 @@ classdef HSBP < Protocol
 
         function failure(obj,uavID)
 
-            FailureEvent.execute(obj.swarm,uavID);
+            u = obj.swarm.findUAV(uavID);
 
-            obj.metrics.failures = ...
-                obj.metrics.failures + 1;
+            if isempty(u)
+                return;
+            end
+
+            clusterID = u.clusterID;
+
+            obj.swarm.removeUAV(uavID);
+
+            cluster = obj.swarm.findCluster(clusterID);
+
+            activeUAVs = cluster.getActiveUAVs();
+
+            if ~isempty(activeUAVs)
+
+                newGroupKey = obj.engine.generateGroupKey(activeUAVs);
+
+                cluster.groupKey = newGroupKey;
+
+                for i = 1:numel(activeUAVs)
+
+                    activeUAVs(i).groupKey = newGroupKey;
+                    activeUAVs(i).keySynced = true;
+
+                end
+
+            else
+
+                cluster.groupKey = [];
+
+            end
+
+            obj.addCost(cluster.count());
+
+            obj.recordFailure();
 
         end
 
