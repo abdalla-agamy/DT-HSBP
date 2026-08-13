@@ -19,60 +19,73 @@ classdef DTHSBP < HSBP
 
         function join(obj, clusterID)
 
-            cfg = obj.cfg;
+    cfg = obj.cfg;
 
-            % Create candidate UAV
-            newID = obj.swarm.nextUAVID;
+    % Create candidate UAV
+    newID = obj.swarm.nextUAVID;
 
-            candidate = UAV(newID, clusterID, cfg);
+    candidate = UAV(newID, clusterID, cfg);
 
-            candidate.dt.tick(candidate,cfg);
+    % DT evaluation
+    candidate.dt.update();
 
-            % DT evaluation
-            if candidate.dt.isStable(cfg)
+    if StabilityModel.canJoin( ...
+            candidate.dt.stabilityScore, ...
+            cfg)
 
-                % Accept UAV
-                obj.swarm.nextUAVID = obj.swarm.nextUAVID + 1;
+        % Accept UAV
+        obj.swarm.nextUAVID = obj.swarm.nextUAVID + 1;
 
-                obj.swarm.clusters(clusterID).addUAV(candidate);
+        obj.swarm.clusters(clusterID).addUAV(candidate);
 
-                % Rekey using inherited HSBP logic
-                cluster = obj.swarm.clusters(clusterID);
+        % Rekey affected cluster
+        cluster = obj.swarm.findCluster(clusterID);
 
-                cluster.groupKey = ...
-                    obj.engine.generateGroupKey(cluster.uavs);
+        activeUAVs = cluster.getActiveUAVs();
 
-                obj.addCost(cluster.count());
+        newGroupKey = ...
+            obj.engine.generateGroupKey(activeUAVs);
 
-                obj.recordJoin();
+        cluster.groupKey = newGroupKey;
 
-            else
+        for i = 1:numel(activeUAVs)
 
-                fprintf("Join rejected by DT.\n");
-
-            end
+            activeUAVs(i).groupKey = newGroupKey;
+            activeUAVs(i).keySynced = true;
 
         end
+
+        obj.addCost(cluster.count());
+
+        obj.recordJoin();
+
+    else
+
+        fprintf("Join rejected by DT.\n");
+
+    end
+
+end
 
         %--------------------------------------------
 
         function leave(obj,uavID)
-            
-             u = obj.swarm.findUAV(uavID);
 
-            if ~u.dt.isStable(obj.cfg)
+    u = obj.swarm.findUAV(uavID);
 
-%             u = obj.swarm.findUAV(uavID);
-% 
-%             if ~u.dt.isStable(u, obj.cfg)
+    if isempty(u)
+        return;
+    end
 
-                fprintf("DT detected unstable UAV %d\n",u.id);
+    if u.dt.stabilityScore > obj.cfg.thetaLeave
 
-            end
+        fprintf("DT detected unstable UAV %d\n",u.id);
 
-            leave@HSBP(obj,uavID);
+    end
 
-        end
+    leave@HSBP(obj,uavID);
+
+end
 
         %--------------------------------------------
 
