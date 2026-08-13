@@ -23,7 +23,7 @@ classdef EventFactory < handle
             %--------------------------------------------------------------
             for i = 1:eventCounts.join
 
-                uavID = obj.swarm.allocateUAVID();
+                uavID = obj.swarm.nextUAVID;
 
                 % Temporary cluster selection
                 clusterID = 1;
