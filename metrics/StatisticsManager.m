@@ -84,12 +84,12 @@ classdef StatisticsManager < handle
 
         function recordRekey(obj, isBatch, result)
 
-%             obj.localRekeys = ...
-%                 obj.localRekeys + 1;
-%             if isBatch
-%                 obj.batchRekeys = ...
-%                     obj.batchRekeys + 1;
-%             end
+            %             obj.localRekeys = ...
+            %                 obj.localRekeys + 1;
+            %             if isBatch
+            %                 obj.batchRekeys = ...
+            %                     obj.batchRekeys + 1;
+            %             end
             obj.totalMessages = ...
                 obj.totalMessages + result.messagesSent;
 
@@ -204,12 +204,13 @@ classdef StatisticsManager < handle
             obj.totalBytes = 0;
             obj.communicationCost = 0;
 
-            
-            
+            obj.totalDecryptions = 0;
+            obj.totalHashOperations = 0;
+            obj.totalRandomNumbers = 0;
 
         end
-        
-        
+
+
 
     end
 
