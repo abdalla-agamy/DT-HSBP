@@ -10,7 +10,6 @@ classdef Simulation < handle
         eventFactory
 
         dtManager
-        rekeyManager
 
         statistics
         currentTime = 0
@@ -36,7 +35,6 @@ classdef Simulation < handle
             obj.eventFactory = EventFactory(obj.swarm);
 
             obj.dtManager = DigitalTwinManager(obj.cfg);
-            obj.rekeyManager = RekeyManager(obj.cfg);
 
             obj.statistics = StatisticsManager(obj.cfg);
 
@@ -106,176 +104,176 @@ classdef Simulation < handle
         end
 
 
-        function processJoinRequest(obj, uavID, clusterID)
+        function processJoinRequest(obj,uavID,clusterID)
 
-            % ------------------------------------------------------------------
-            % Admission Control
-            % ------------------------------------------------------------------
-            candidate.id=uavID;
-            candidate.cluster=clusterID;
-            decision  = obj.makeAdmissionDecision(candidate);
+    %--------------------------------------------------------------
+    % Protocol-specific admission and join
+    %--------------------------------------------------------------
+    rekeyResult = obj.protocol.join(uavID,clusterID);
 
-            if ~decision.accepted
-                obj.statistics.incrementRejectedJoin();
-                return;
-            end
+    %--------------------------------------------------------------
+    % Join rejected
+    %--------------------------------------------------------------
+    if isempty(rekeyResult)
 
-            % ------------------------------------------------------------------
-            % Add UAV to the swarm
-            % ------------------------------------------------------------------
-            obj.swarm.addUAV(uavID, clusterID);
+        obj.statistics.incrementRejectedJoin();
+        return;
 
-            %--------------------------------------------------------------
-            % Register Digital Twin
-            %--------------------------------------------------------------
-            uav = obj.swarm.findUAV(uavID);
+    end
 
-            obj.dtManager.registerUAV(uav);
+    %--------------------------------------------------------------
+    % Register Digital Twin after successful admission
+    %--------------------------------------------------------------
+    uav = obj.swarm.findUAV(uavID);
 
-            % ------------------------------------------------------------------
-            % Local Rekey
-            % ------------------------------------------------------------------
-            cluster = obj.swarm.findCluster(clusterID);
+    if ~isempty(uav)
 
-            rekeyResult = obj.rekeyManager.performLocalRekey(cluster);
+        obj.dtManager.registerUAV(uav);
 
-            % ------------------------------------------------------------------
-            % Statistics
-            % ------------------------------------------------------------------
-            obj.statistics.incrementJoin();
-            obj.statistics.recordRekey(false, rekeyResult);            
+    end
 
-        end
+    %--------------------------------------------------------------
+    % Statistics
+    %--------------------------------------------------------------
+    obj.statistics.incrementJoin();
 
-        function processLeaveRequest(obj, uavID)
+    obj.statistics.recordRekey(false,rekeyResult);
 
+end
 
-            decision = obj.makeLeaveDecision(uavID);
+        function processLeaveRequest(obj,uavID)
 
-            if ~decision.approved
-                return;
-            end
+    decision = obj.makeLeaveDecision(uavID);
 
-            uav = obj.swarm.findUAV(uavID);
+    if ~decision.approved
+        return;
+    end
 
-            clusterID = uav.clusterID;
+    uav = obj.swarm.findUAV(uavID);
 
-            %--------------------------------------------------------------
-            % Predict additional departures
-            %--------------------------------------------------------------
-            predictedLeaves = obj.dtManager.findUnstableUAVs(uavID);
+    if isempty(uav)
+        return;
+    end
 
-            for i = 1:numel(predictedLeaves)
+    %--------------------------------------------------------------
+    % Predict additional departures
+    %--------------------------------------------------------------
+    predictedLeaves = ...
+        obj.dtManager.findUnstableUAVs(uavID);
 
-                predictedID = predictedLeaves(i);
+    for i = 1:numel(predictedLeaves)
 
-                obj.dtManager.removeUAV(predictedID);   % Remove Digital Twin
+        predictedID = predictedLeaves(i);
 
-                obj.swarm.removeUAV(predictedID);       % Remove UAV
+        obj.dtManager.removeUAV(predictedID);
+        obj.swarm.removeUAV(predictedID);
 
-            end
+    end
 
-            %------------------------------------------------------------------
-            % Remove Digital Twin
-            %------------------------------------------------------------------
+    %--------------------------------------------------------------
+    % Remove Digital Twin of requested UAV
+    %--------------------------------------------------------------
+    obj.dtManager.removeUAV(uavID);
 
-            obj.dtManager.removeUAV(uavID);  
+    %--------------------------------------------------------------
+    % Protocol owns requested UAV removal and rekey
+    %--------------------------------------------------------------
+    rekeyResult = obj.protocol.leave(uavID);
 
-            %------------------------------------------------------------------
-            % Remove UAV
-            %------------------------------------------------------------------
+    %--------------------------------------------------------------
+    % Statistics
+    %--------------------------------------------------------------
+    if ~isempty(predictedLeaves)
 
-            obj.swarm.removeUAV(uavID);       
+        obj.statistics.incrementPredictedLeaves( ...
+            numel(predictedLeaves));
 
-            % ------------------------------------------------------------------
-            % Predictive Batch Rekey
-            % ------------------------------------------------------------------
+        if ~isempty(rekeyResult)
 
-            cluster = obj.swarm.findCluster(clusterID);
-
-            rekeyResult = obj.rekeyManager.performLocalRekey(cluster);
-
-            % ------------------------------------------------------------------
-            % Statistics
-            % -----------------------------------------------------------------
-
-            if ~isempty(predictedLeaves)
-                obj.statistics.incrementPredictedLeaves( ...
-                    numel(predictedLeaves));
-                obj.statistics.recordRekey(true, rekeyResult);
-            else
-                obj.statistics.incrementLeave();
-                obj.statistics.recordRekey(false, rekeyResult);
-            end
+            obj.statistics.recordRekey(true,rekeyResult);
 
         end
 
-        function processFailure(obj, uavID, reason)
+    else
 
+        obj.statistics.incrementLeave();
 
-            decision = obj.makeFailureDecision(uavID, reason);
+        if ~isempty(rekeyResult)
 
-            if ~decision.approved
-                return;
-            end
-
-            uav = obj.swarm.findUAV(uavID);
-
-            clusterID = uav.clusterID;
-
-            %--------------------------------------------------------------
-            % Predict additional failure
-            %--------------------------------------------------------------
-            predictedLeaves = obj.dtManager.findUnstableUAVs(uavID);
-
-            for i = 1:numel(predictedLeaves)
-
-                predictedID = predictedLeaves(i);
-
-                obj.dtManager.removeUAV(predictedID);   % Remove Digital Twin
-
-                obj.swarm.removeUAV(predictedID);       % Remove UAV
-
-            end
-            %------------------------------------------------------------------
-            % Remove Digital Twin
-            %------------------------------------------------------------------
-
-            obj.dtManager.removeUAV(uavID);  
-
-            %------------------------------------------------------------------
-            % Remove UAV
-            %------------------------------------------------------------------
-
-            obj.swarm.removeUAV(uavID);       
-
-            % ------------------------------------------------------------------
-            % Failure reason available for future DT logic
-            % ------------------------------------------------------------------
-            failureReason = reason;
-
-            % ------------------------------------------------------------------
-            % Predictive Batch Rekey
-            % (To be implemented.)
-            % ------------------------------------------------------------------
-            cluster = obj.swarm.findCluster(clusterID);
-
-            rekeyResult = obj.rekeyManager.performLocalRekey(cluster);
-
-            % ------------------------------------------------------------------
-            % Statistics
-            % ------------------------------------------------------------------
-
-            if ~isempty(predictedLeaves)
-                obj.statistics.incrementPredictedLeaves( ...
-                    numel(predictedLeaves));
-                obj.statistics.recordRekey(true, rekeyResult);
-            else
-                obj.statistics.incrementFailure();
-                obj.statistics.recordRekey(false, rekeyResult);
-            end
+            obj.statistics.recordRekey(false,rekeyResult);
 
         end
+
+    end
+
+end
+
+        function processFailure(obj,uavID,reason)
+
+    decision = obj.makeFailureDecision(uavID,reason);
+
+    if ~decision.approved
+        return;
+    end
+
+    uav = obj.swarm.findUAV(uavID);
+
+    if isempty(uav)
+        return;
+    end
+
+    %--------------------------------------------------------------
+    % Predict additional failures
+    %--------------------------------------------------------------
+    predictedLeaves = ...
+        obj.dtManager.findUnstableUAVs(uavID);
+
+    for i = 1:numel(predictedLeaves)
+
+        predictedID = predictedLeaves(i);
+
+        obj.dtManager.removeUAV(predictedID);
+        obj.swarm.removeUAV(predictedID);
+
+    end
+
+    %--------------------------------------------------------------
+    % Remove Digital Twin of failed UAV
+    %--------------------------------------------------------------
+    obj.dtManager.removeUAV(uavID);
+
+    %--------------------------------------------------------------
+    % Protocol owns failure removal and rekey
+    %--------------------------------------------------------------
+    rekeyResult = obj.protocol.failure(uavID);
+
+    %--------------------------------------------------------------
+    % Statistics
+    %--------------------------------------------------------------
+    if ~isempty(predictedLeaves)
+
+        obj.statistics.incrementPredictedLeaves( ...
+            numel(predictedLeaves));
+
+        if ~isempty(rekeyResult)
+
+            obj.statistics.recordRekey(true,rekeyResult);
+
+        end
+
+    else
+
+        obj.statistics.incrementFailure();
+
+        if ~isempty(rekeyResult)
+
+            obj.statistics.recordRekey(false,rekeyResult);
+
+        end
+
+    end
+
+end
 
         function result = makeAdmissionDecision(obj, candidateUAV)
 

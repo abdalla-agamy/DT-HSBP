@@ -18,7 +18,7 @@ classdef HSBP < Protocol
 
         %--------------------------------------------
 
-        function join(obj,uavID,clusterID)
+        function result = join(obj,uavID,clusterID)
 
             obj.swarm.addUAV(uavID,clusterID);
 
@@ -37,6 +37,10 @@ classdef HSBP < Protocol
 
             end
 
+            result = obj.createRekeyResult( ...
+                activeUAVs, ...
+                clusterID)
+
             obj.addCost(cluster.count());
 
             obj.recordJoin();
@@ -45,11 +49,12 @@ classdef HSBP < Protocol
 
         %--------------------------------------------
 
-        function leave(obj,uavID)
+        function result = leave(obj,uavID)
 
             u = obj.swarm.findUAV(uavID);
 
             if isempty(u)
+                result = [];
                 return;
             end
 
@@ -73,10 +78,14 @@ classdef HSBP < Protocol
                     activeUAVs(i).keySynced = true;
 
                 end
+                result = obj.createRekeyResult( ...
+                    activeUAVs, ...
+                    clusterID);
 
             else
 
                 cluster.groupKey = [];
+                result = [];
 
             end
 
@@ -88,11 +97,12 @@ classdef HSBP < Protocol
 
         %--------------------------------------------
 
-        function failure(obj,uavID)
+        function result = failure(obj,uavID)
 
             u = obj.swarm.findUAV(uavID);
 
             if isempty(u)
+                result = [];
                 return;
             end
 
@@ -117,9 +127,14 @@ classdef HSBP < Protocol
 
                 end
 
+                result = obj.createRekeyResult( ...
+                    activeUAVs, ...
+                    clusterID);
+
             else
 
                 cluster.groupKey = [];
+                result = [];
 
             end
 

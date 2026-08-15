@@ -17,7 +17,7 @@ classdef DTHSBP < HSBP
 
         %--------------------------------------------
 
-        function join(obj,uavID,clusterID)
+        function result = join(obj,uavID,clusterID)
 
             cfg = obj.cfg;
 
@@ -50,11 +50,16 @@ classdef DTHSBP < HSBP
 
                 end
 
+                result = obj.createRekeyResult( ...
+    activeUAVs, ...
+    clusterID);
+
                 obj.addCost(cluster.count());
 
                 obj.recordJoin();
 
             else
+                result = [];
 
                 fprintf("Join rejected by DT.\n");
 
@@ -64,11 +69,12 @@ classdef DTHSBP < HSBP
 
         %--------------------------------------------
 
-        function leave(obj,uavID)
+        function result = leave(obj,uavID)
 
             u = obj.swarm.findUAV(uavID);
 
             if isempty(u)
+                result =[];
                 return;
             end
 
@@ -78,20 +84,30 @@ classdef DTHSBP < HSBP
 
             end
 
-            leave@HSBP(obj,uavID);
+            result = leave@HSBP(obj,uavID);
 
         end
 
         %--------------------------------------------
 
-        %         function failure(obj,uavID)
-        %
-        %             FailureEvent.execute(obj.swarm,uavID);
-        %
-        %             obj.metrics.failures = ...
-        %                 obj.metrics.failures + 1;
-        %
-        %         end
+        function result=failure(obj,uavID)
+
+            u = obj.swarm.findUAV(uavID);
+
+            if isempty(u)
+                result =[];
+                return;
+            end
+
+            if u.dt.stabilityScore > obj.cfg.cfg.stabilityThreshold
+
+                fprintf("DT detected Failed UAV %d\n",u.id);
+
+            end
+
+            result = failure@HSBP(obj,uavID);
+
+        end
 
     end
 

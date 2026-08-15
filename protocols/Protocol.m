@@ -6,17 +6,18 @@ classdef (Abstract) Protocol < handle
 
         metrics
         engine
+        rekeyManager
     end
 
     methods (Abstract)
 
         initialize(obj)
 
-        join(obj,uavID,clusterID)
+        result = join(obj,uavID,clusterID)
 
-        leave(obj,uavID)
+        result = leave(obj,uavID)
 
-        failure(obj,uavID)
+        result = failure(obj,uavID)
 
     end
 
@@ -28,6 +29,7 @@ classdef (Abstract) Protocol < handle
             obj.cfg = swarm.config;
             obj.metrics = Metrics();
             obj.engine = SBPEngine(obj.cfg);
+            obj.rekeyManager = RekeyManager(obj.cfg);
 
         end
 
@@ -62,7 +64,18 @@ classdef (Abstract) Protocol < handle
         end
 
     end
+    methods (Access = protected)
 
-    
+        function result = createRekeyResult( ...
+                obj,affectedUAVs,clusterID)
+
+            result = obj.rekeyManager.buildResult( ...
+                affectedUAVs,clusterID);
+
+        end
+
+    end
+
+
 
 end

@@ -17,27 +17,28 @@ classdef RekeyManager < handle
         end
 
         %----------------------------------------------------------
-        function result = performLocalRekey(obj, cluster)
+        function result = performLocalRekey(obj,cluster)
 
-            %--------------------------------------------------------------
-            % Create result object
-            %--------------------------------------------------------------
-            result = RekeyResult();
-
-            result.clusterID = cluster.id;
-
-            %--------------------------------------------------------------
-            % Determine affected UAVs
-            %--------------------------------------------------------------
             activeUAVs = cluster.getActiveUAVs();
 
-            result.affectedUAVs = activeUAVs;
+            result = obj.buildResult( ...
+                activeUAVs, ...
+                cluster.id);
 
-            result.numAffected = numel(activeUAVs);
+        end
 
-            %--------------------------------------------------------------
-            % Protocol metrics
-            %--------------------------------------------------------------
+        %----------------------------------------------------------
+        function result = buildResult( ...
+                obj,affectedUAVs,clusterID)
+
+            result = RekeyResult();
+
+            result.clusterID = clusterID;
+
+            result.affectedUAVs = affectedUAVs;
+
+            result.numAffected = numel(affectedUAVs);
+
             result.keysGenerated = 1;
 
             result.messagesSent = result.numAffected;
@@ -50,13 +51,9 @@ classdef RekeyManager < handle
 
             result.randomNumbers = 1;
 
-            %--------------------------------------------------------------
-            % Internal statistics
-            %--------------------------------------------------------------
             obj.totalRekeys = obj.totalRekeys + 1;
 
         end
-
         %----------------------------------------------------------
         function n = getTotalRekeys(obj)
 

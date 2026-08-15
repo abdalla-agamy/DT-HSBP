@@ -18,7 +18,7 @@ classdef FlatSBP < Protocol
 
         %-----------------------------------
 
-        function join(obj,uavID,clusterID)
+        function result = join(obj,uavID,clusterID)
 
             obj.swarm.addUAV(uavID,clusterID);
 
@@ -33,6 +33,8 @@ classdef FlatSBP < Protocol
 
             end
 
+            result = obj.createRekeyResult(allUAVs,[]);
+
             obj.addCost(obj.swarm.totalUAVs());
 
             obj.recordJoin();
@@ -41,11 +43,12 @@ classdef FlatSBP < Protocol
 
         %-----------------------------------
 
-        function leave(obj,uavID)
+        function result = leave(obj,uavID)
 
             uav = obj.swarm.findUAV(uavID);
 
             if isempty(uav)
+                result = [];
                 return;
             end
 
@@ -63,6 +66,12 @@ classdef FlatSBP < Protocol
                     allUAVs(i).keySynced = true;
 
                 end
+
+                result = obj.createRekeyResult(allUAVs,[]);
+
+            else
+
+                result = [];
 
             end
 
@@ -74,11 +83,12 @@ classdef FlatSBP < Protocol
 
         %-----------------------------------
 
-        function failure(obj,uavID)
+        function result = failure(obj,uavID)
 
             uav = obj.swarm.findUAV(uavID);
 
             if isempty(uav)
+                result = [];
                 return;
             end
 
@@ -96,6 +106,12 @@ classdef FlatSBP < Protocol
                     allUAVs(i).keySynced = true;
 
                 end
+
+                result = obj.createRekeyResult(allUAVs,[]);
+
+            else
+
+                result = [];
 
             end
 
