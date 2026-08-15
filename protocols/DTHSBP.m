@@ -99,7 +99,7 @@ classdef DTHSBP < HSBP
                 return;
             end
 
-            if u.dt.stabilityScore > obj.cfg.cfg.stabilityThreshold
+            if u.dt.stabilityScore > obj.cfg.stabilityThreshold
 
                 fprintf("DT detected Failed UAV %d\n",u.id);
 

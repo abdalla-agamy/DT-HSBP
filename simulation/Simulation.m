@@ -69,13 +69,17 @@ classdef Simulation < handle
             obj.processEvents();
 
             %--------------------------------------------------------------
-            % 5. Update Digital Twins
+            % 5. Update physical swarm state and Digital Twins
+            %--------------------------------------------------------------
+            obj.swarm.step(obj.cfg);
+
+            %--------------------------------------------------------------
+            % 6. Update Digital Twins managed by the simulation
             %--------------------------------------------------------------
             obj.updateDigitalTwins();
 
-
             %--------------------------------------------------------------
-            % 9. Advance simulation time
+            % 7. Advance simulation time
             %--------------------------------------------------------------
             obj.currentTime = obj.currentTime + obj.cfg.timeStep;
 
@@ -106,190 +110,190 @@ classdef Simulation < handle
 
         function processJoinRequest(obj,uavID,clusterID)
 
-    %--------------------------------------------------------------
-    % Protocol-specific admission and join
-    %--------------------------------------------------------------
-    rekeyResult = obj.protocol.join(uavID,clusterID);
+            %--------------------------------------------------------------
+            % Protocol-specific admission and join
+            %--------------------------------------------------------------
+            rekeyResult = obj.protocol.join(uavID,clusterID);
 
-    %--------------------------------------------------------------
-    % Join rejected
-    %--------------------------------------------------------------
-    if isempty(rekeyResult)
+            %--------------------------------------------------------------
+            % Join rejected
+            %--------------------------------------------------------------
+            if isempty(rekeyResult)
 
-        obj.statistics.incrementRejectedJoin();
-        return;
+                obj.statistics.incrementRejectedJoin();
+                return;
 
-    end
+            end
 
-    %--------------------------------------------------------------
-    % Register Digital Twin after successful admission
-    %--------------------------------------------------------------
-    uav = obj.swarm.findUAV(uavID);
+            %--------------------------------------------------------------
+            % Register Digital Twin after successful admission
+            %--------------------------------------------------------------
+            uav = obj.swarm.findUAV(uavID);
 
-    if ~isempty(uav)
+            if ~isempty(uav)
 
-        obj.dtManager.registerUAV(uav);
+                obj.dtManager.registerUAV(uav);
 
-    end
+            end
 
-    %--------------------------------------------------------------
-    % Statistics
-    %--------------------------------------------------------------
-    obj.statistics.incrementJoin();
+            %--------------------------------------------------------------
+            % Statistics
+            %--------------------------------------------------------------
+            obj.statistics.incrementJoin();
 
-    obj.statistics.recordRekey(false,rekeyResult);
+            obj.statistics.recordRekey(false,rekeyResult);
 
-end
+        end
 
         function processLeaveRequest(obj,uavID)
 
-    decision = obj.makeLeaveDecision(uavID);
+            decision = obj.makeLeaveDecision(uavID);
 
-    if ~decision.approved
-        return;
-    end
+            if ~decision.approved
+                return;
+            end
 
-    uav = obj.swarm.findUAV(uavID);
+            uav = obj.swarm.findUAV(uavID);
 
-    if isempty(uav)
-        return;
-    end
+            if isempty(uav)
+                return;
+            end
 
-    %--------------------------------------------------------------
-    % Predict additional departures
-    %--------------------------------------------------------------
-    predictedLeaves = ...
-        obj.dtManager.findUnstableUAVs(uavID);
+            %--------------------------------------------------------------
+            % Predict additional departures
+            %--------------------------------------------------------------
+            predictedLeaves = ...
+                obj.dtManager.findUnstableUAVs(uavID);
 
-    for i = 1:numel(predictedLeaves)
+            for i = 1:numel(predictedLeaves)
 
-        predictedID = predictedLeaves(i);
+                predictedID = predictedLeaves(i);
 
-        obj.dtManager.removeUAV(predictedID);
-        obj.swarm.removeUAV(predictedID);
+                obj.dtManager.removeUAV(predictedID);
+                obj.swarm.removeUAV(predictedID);
 
-    end
+            end
 
-    %--------------------------------------------------------------
-    % Remove Digital Twin of requested UAV
-    %--------------------------------------------------------------
-    obj.dtManager.removeUAV(uavID);
+            %--------------------------------------------------------------
+            % Remove Digital Twin of requested UAV
+            %--------------------------------------------------------------
+            obj.dtManager.removeUAV(uavID);
 
-    %--------------------------------------------------------------
-    % Protocol owns requested UAV removal and rekey
-    %--------------------------------------------------------------
-    rekeyResult = obj.protocol.leave(uavID);
+            %--------------------------------------------------------------
+            % Protocol owns requested UAV removal and rekey
+            %--------------------------------------------------------------
+            rekeyResult = obj.protocol.leave(uavID);
 
-    %--------------------------------------------------------------
-    % Statistics
-    %--------------------------------------------------------------
-    if ~isempty(predictedLeaves)
+            %--------------------------------------------------------------
+            % Statistics
+            %--------------------------------------------------------------
+            if ~isempty(predictedLeaves)
 
-        obj.statistics.incrementPredictedLeaves( ...
-            numel(predictedLeaves));
+                obj.statistics.incrementPredictedLeaves( ...
+                    numel(predictedLeaves));
 
-        if ~isempty(rekeyResult)
+                if ~isempty(rekeyResult)
 
-            obj.statistics.recordRekey(true,rekeyResult);
+                    obj.statistics.recordRekey(true,rekeyResult);
+
+                end
+
+            else
+
+                obj.statistics.incrementLeave();
+
+                if ~isempty(rekeyResult)
+
+                    obj.statistics.recordRekey(false,rekeyResult);
+
+                end
+
+            end
 
         end
-
-    else
-
-        obj.statistics.incrementLeave();
-
-        if ~isempty(rekeyResult)
-
-            obj.statistics.recordRekey(false,rekeyResult);
-
-        end
-
-    end
-
-end
 
         function processFailure(obj,uavID,reason)
 
-    decision = obj.makeFailureDecision(uavID,reason);
+            decision = obj.makeFailureDecision(uavID,reason);
 
-    if ~decision.approved
-        return;
-    end
+            if ~decision.approved
+                return;
+            end
 
-    uav = obj.swarm.findUAV(uavID);
+            uav = obj.swarm.findUAV(uavID);
 
-    if isempty(uav)
-        return;
-    end
+            if isempty(uav)
+                return;
+            end
 
-    %--------------------------------------------------------------
-    % Predict additional failures
-    %--------------------------------------------------------------
-    predictedLeaves = ...
-        obj.dtManager.findUnstableUAVs(uavID);
+            %--------------------------------------------------------------
+            % Predict additional failures
+            %--------------------------------------------------------------
+            predictedLeaves = ...
+                obj.dtManager.findUnstableUAVs(uavID);
 
-    for i = 1:numel(predictedLeaves)
+            for i = 1:numel(predictedLeaves)
 
-        predictedID = predictedLeaves(i);
+                predictedID = predictedLeaves(i);
 
-        obj.dtManager.removeUAV(predictedID);
-        obj.swarm.removeUAV(predictedID);
+                obj.dtManager.removeUAV(predictedID);
+                obj.swarm.removeUAV(predictedID);
 
-    end
+            end
 
-    %--------------------------------------------------------------
-    % Remove Digital Twin of failed UAV
-    %--------------------------------------------------------------
-    obj.dtManager.removeUAV(uavID);
+            %--------------------------------------------------------------
+            % Remove Digital Twin of failed UAV
+            %--------------------------------------------------------------
+            obj.dtManager.removeUAV(uavID);
 
-    %--------------------------------------------------------------
-    % Protocol owns failure removal and rekey
-    %--------------------------------------------------------------
-    rekeyResult = obj.protocol.failure(uavID);
+            %--------------------------------------------------------------
+            % Protocol owns failure removal and rekey
+            %--------------------------------------------------------------
+            rekeyResult = obj.protocol.failure(uavID);
 
-    %--------------------------------------------------------------
-    % Statistics
-    %--------------------------------------------------------------
-    if ~isempty(predictedLeaves)
+            %--------------------------------------------------------------
+            % Statistics
+            %--------------------------------------------------------------
+            if ~isempty(predictedLeaves)
 
-        obj.statistics.incrementPredictedLeaves( ...
-            numel(predictedLeaves));
+                obj.statistics.incrementPredictedLeaves( ...
+                    numel(predictedLeaves));
 
-        if ~isempty(rekeyResult)
+                if ~isempty(rekeyResult)
 
-            obj.statistics.recordRekey(true,rekeyResult);
+                    obj.statistics.recordRekey(true,rekeyResult);
+
+                end
+
+            else
+
+                obj.statistics.incrementFailure();
+
+                if ~isempty(rekeyResult)
+
+                    obj.statistics.recordRekey(false,rekeyResult);
+
+                end
+
+            end
 
         end
-
-    else
-
-        obj.statistics.incrementFailure();
-
-        if ~isempty(rekeyResult)
-
-            obj.statistics.recordRekey(false,rekeyResult);
-
-        end
-
-    end
-
-end
 
         function result = makeAdmissionDecision(obj, candidateUAV)
 
-%             health = obj.dtManager.predictHealth(candidateUAV);
-% 
-%             if health > obj.cfg.healthThreshold
-% 
-%                 result.accepted = true;
-%                 result.reason = "Accepted";
-% 
-%             else
-% 
-%                 result.accepted = false;
-%                 result.reason = "LowHealth";
-% 
-%             end
+            %             health = obj.dtManager.predictHealth(candidateUAV);
+            %
+            %             if health > obj.cfg.healthThreshold
+            %
+            %                 result.accepted = true;
+            %                 result.reason = "Accepted";
+            %
+            %             else
+            %
+            %                 result.accepted = false;
+            %                 result.reason = "LowHealth";
+            %
+            %             end
             result.accepted = true;
             result.reason = "Accepted";
 
@@ -305,7 +309,7 @@ end
             %   decision.approved - true if the leave request is approved.
             %   decision.reason   - Text describing the decision.
 
-            
+
 
             decision.approved = true;
             decision.reason = "Approved";
@@ -358,7 +362,7 @@ end
 
             fprintf('Communication Cost: %.0f\n', ...
                 stats.communicationCost);
-            
+
             fprintf('Encryptions       : %d\n', ...
                 stats.totalEncryptions);
 
