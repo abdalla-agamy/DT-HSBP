@@ -56,10 +56,13 @@ function result = DTValidationExperiment()
 
     for t = 1:cfg.simulationTime
 
-        % Introduce the controlled validation disturbance immediately
-        % before the t=40 simulation step. This creates a deliberate
-        % physical/DT prediction mismatch.
-        if t == disturbanceTime
+        % The paper describes instability beginning at t=40 s and
+        % continuing until the scheduled rekey. Because the current DT
+        % predictor is reset from the latest actual state after each
+        % residual calculation, a one-time displacement would disappear
+        % after one DT cycle. Therefore the diagnostic applies the
+        % controlled disturbance throughout the validation interval.
+        if t >= disturbanceTime && t <= rekeyTime
             disturbedUAV.position = ...
                 disturbedUAV.position + positionPerturbation;
         end
@@ -77,19 +80,9 @@ function result = DTValidationExperiment()
         end
 
         % The paper's validation scenario schedules the rekey at t=55 s.
-        % We issue the controlled leave through the Simulation event path,
-        % so the protocol owns predicted-leave handling and rekeying.
+        % We invoke the protocol leave operation directly here so that the
+        % returned RekeyResult exposes the DT-HSBP predicted-leave set.
         if t == rekeyTime
-            leavingUAV = swarm.findUAV(disturbedUAVID);
-
-            if isempty(leavingUAV)
-                error('DTValidationExperiment:UAVAlreadyRemoved', ...
-                    'Scheduled UAV %d is no longer active at rekey time.', ...
-                    disturbedUAVID);
-            end
-
-            % If the disturbed UAV itself is the requestor, use a different
-            % stable member so the disturbance can trigger predicted leaves.
             requestUAV = swarm.findUAV(3);
 
             if isempty(requestUAV)
