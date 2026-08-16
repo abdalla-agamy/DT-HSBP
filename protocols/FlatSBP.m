@@ -24,16 +24,23 @@ classdef FlatSBP < Protocol
 
             allUAVs = obj.swarm.getActiveUAVs();
 
+            leaderTimer = tic;
             newGroupKey = obj.engine.generateGroupKey(allUAVs);
+            leaderTime = toc(leaderTimer);
 
+            followerTimer = tic;
             for i = 1:numel(allUAVs)
 
                 allUAVs(i).groupKey = newGroupKey;
                 allUAVs(i).keySynced = true;
 
             end
+            followerTime = toc(followerTimer);
 
             result = obj.createRekeyResult(allUAVs,[]);
+
+            result.leaderTime = leaderTime;
+            result.followerTime = followerTime;
 
             obj.addCost(obj.swarm.totalUAVs());
 
@@ -58,16 +65,23 @@ classdef FlatSBP < Protocol
 
             if ~isempty(allUAVs)
 
+                leaderTimer = tic;
                 newGroupKey = obj.engine.generateGroupKey(allUAVs);
+                leaderTime = toc(leaderTimer);
 
+                followerTimer = tic;
                 for i = 1:numel(allUAVs)
 
                     allUAVs(i).groupKey = newGroupKey;
                     allUAVs(i).keySynced = true;
 
                 end
+                followerTime = toc(followerTimer);
 
                 result = obj.createRekeyResult(allUAVs,[]);
+
+                result.leaderTime = leaderTime;
+                result.followerTime = followerTime;
 
             else
 
@@ -98,16 +112,23 @@ classdef FlatSBP < Protocol
 
             if ~isempty(allUAVs)
 
+                leaderTimer = tic;
                 newGroupKey = obj.engine.generateGroupKey(allUAVs);
+                leaderTime = toc(leaderTimer);
 
+                followerTimer = tic;
                 for i = 1:numel(allUAVs)
 
                     allUAVs(i).groupKey = newGroupKey;
                     allUAVs(i).keySynced = true;
 
                 end
+                followerTime = toc(followerTimer);
 
                 result = obj.createRekeyResult(allUAVs,[]);
+
+                result.leaderTime = leaderTime;
+                result.followerTime = followerTime;
 
             else
 
