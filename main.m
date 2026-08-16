@@ -5,16 +5,15 @@ cfg = config();
 
 swarm = Swarm(cfg);
 
-fprintf("Initial UAVs : %d\n", swarm.totalUAVs());
+protocol = DTHSBP(swarm);
 
-JoinEvent.execute(swarm,3);
+sim = Simulation(cfg,protocol);
 
-fprintf("After Join : %d\n", swarm.totalUAVs());
+fprintf("Initial UAVs : %d\n",sim.swarm.totalUAVs());
 
-FailureEvent.execute(swarm,500);
+sim.step();
 
-fprintf("Active UAVs : %d\n", swarm.activeUAVs());
+fprintf("Current time : %.1f\n",sim.currentTime);
+fprintf("Active UAVs  : %d\n",sim.swarm.activeUAVs());
 
-LeaveEvent.execute(swarm,100);
-
-fprintf("After Leave : %d\n", swarm.totalUAVs());
+sim.printStatistics();
