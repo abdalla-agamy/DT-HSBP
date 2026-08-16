@@ -93,6 +93,8 @@ function result = runJoinExperiment(protocolName, swarmSize, clusterID, runID, r
 
     if isempty(rekeyResult)
         result.rejectedJoins = 1;
+        result.success = false;
+        result.status = "Rejected";
     else
         result.acceptedJoins = 1;
         result.rekeyCount = 1;
@@ -100,6 +102,8 @@ function result = runJoinExperiment(protocolName, swarmSize, clusterID, runID, r
         result.followerTime = rekeyResult.followerTime;
         result.messageCount = rekeyResult.messagesSent;
         result.messageBytes = rekeyResult.messagesSent * cfg.messageSize;
+        result.success = true;
+        result.status = "Success";
     end
 
 end
