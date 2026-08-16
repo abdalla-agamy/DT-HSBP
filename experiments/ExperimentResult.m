@@ -12,6 +12,10 @@ classdef ExperimentResult < handle
         runID = 0
         randomSeed = []
 
+        % Operation outcome
+        success = false
+        status = "NotExecuted"
+
         % Network configuration
         swarmSize = 0
         clusterCount = 0
