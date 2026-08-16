@@ -2,7 +2,7 @@ classdef ExperimentStatistics
     %EXPERIMENTSTATISTICS Statistical aggregation of experiment observations.
     %
     % Computes descriptive statistics independently for each
-    % (protocol, swarmSize) configuration.
+    % (eventType, protocol, swarmSize) configuration.
 
     methods (Static)
 
@@ -10,9 +10,9 @@ classdef ExperimentStatistics
             %SUMMARIZE Aggregate raw ExperimentResult structs.
             %
             % STATISTICS = SUMMARIZE(RESULTS) returns one row per unique
-            % protocol/swarm-size configuration. For each measured metric,
-            % mean, sample variance, and sample standard deviation are
-            % reported.
+            % event/protocol/swarm-size configuration. Failed and rejected
+            % observations are excluded from performance statistics, while
+            % attempted, successful, rejected, and failed counts are kept.
 
             if isempty(results)
                 statistics = struct([]);
@@ -25,9 +25,10 @@ classdef ExperimentStatistics
             end
 
             requiredFields = { ...
-                'protocol', 'swarmSize', ...
+                'eventType', 'protocol', 'swarmSize', ...
                 'leaderTime', 'followerTime', ...
-                'messageCount', 'messageBytes'};
+                'messageCount', 'messageBytes', ...
+                'success', 'status'};
 
             for i = 1:numel(requiredFields)
                 if ~isfield(results, requiredFields{i})
@@ -37,33 +38,52 @@ classdef ExperimentStatistics
                 end
             end
 
+            eventTypes = string({results.eventType});
             protocols = string({results.protocol});
             swarmSizes = [results.swarmSize];
 
-            keys = unique([protocols + "|" + string(swarmSizes)], 'stable');
+            keys = unique( ...
+                eventTypes + "|" + protocols + "|" + string(swarmSizes), ...
+                'stable');
+
             statistics = repmat(ExperimentStatistics.emptyRecord(), ...
                 numel(keys), 1);
 
             for k = 1:numel(keys)
                 parts = split(keys(k), '|');
-                protocol = parts(1);
-                swarmSize = str2double(parts(2));
 
-                mask = protocols == protocol & swarmSizes == swarmSize;
+                eventType = parts(1);
+                protocol = parts(2);
+                swarmSize = str2double(parts(3));
+
+                mask = eventTypes == eventType & ...
+                       protocols == protocol & ...
+                       swarmSizes == swarmSize;
+
                 observations = results(mask);
 
+                successMask = [observations.success];
+                successful = observations(successMask);
+
+                statuses = string({observations.status});
+
+                statistics(k).eventType = eventType;
                 statistics(k).protocol = protocol;
                 statistics(k).swarmSize = swarmSize;
-                statistics(k).sampleCount = numel(observations);
+
+                statistics(k).attemptedCount = numel(observations);
+                statistics(k).successfulCount = numel(successful);
+                statistics(k).rejectedCount = sum(statuses == "Rejected");
+                statistics(k).failedCount = sum(statuses == "Failed");
 
                 statistics(k).leaderTime = ...
-                    ExperimentStatistics.describe([observations.leaderTime]);
+                    ExperimentStatistics.describe([successful.leaderTime]);
                 statistics(k).followerTime = ...
-                    ExperimentStatistics.describe([observations.followerTime]);
+                    ExperimentStatistics.describe([successful.followerTime]);
                 statistics(k).messageCount = ...
-                    ExperimentStatistics.describe([observations.messageCount]);
+                    ExperimentStatistics.describe([successful.messageCount]);
                 statistics(k).messageBytes = ...
-                    ExperimentStatistics.describe([observations.messageBytes]);
+                    ExperimentStatistics.describe([successful.messageBytes]);
             end
         end
 
@@ -73,18 +93,29 @@ classdef ExperimentStatistics
 
         function record = emptyRecord()
             record = struct( ...
+                'eventType', "", ...
                 'protocol', "", ...
                 'swarmSize', 0, ...
-                'sampleCount', 0, ...
-                'leaderTime', struct('mean',0,'variance',0,'std',0), ...
-                'followerTime', struct('mean',0,'variance',0,'std',0), ...
-                'messageCount', struct('mean',0,'variance',0,'std',0), ...
-                'messageBytes', struct('mean',0,'variance',0,'std',0));
+                'attemptedCount', 0, ...
+                'successfulCount', 0, ...
+                'rejectedCount', 0, ...
+                'failedCount', 0, ...
+                'leaderTime', struct('mean',NaN,'variance',NaN,'std',NaN), ...
+                'followerTime', struct('mean',NaN,'variance',NaN,'std',NaN), ...
+                'messageCount', struct('mean',NaN,'variance',NaN,'std',NaN), ...
+                'messageBytes', struct('mean',NaN,'variance',NaN,'std',NaN));
         end
 
         function statistics = describe(values)
             values = double(values(:));
             n = numel(values);
+
+            if n == 0
+                statistics.mean = NaN;
+                statistics.variance = NaN;
+                statistics.std = NaN;
+                return;
+            end
 
             statistics.mean = mean(values);
 
