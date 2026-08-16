@@ -56,7 +56,9 @@ function results = runExperimentStudy( ...
     totalRuns = numel(protocolNames) * ...
         numel(swarmSizes) * repetitions;
 
-    results = struct([]);
+    % Accumulate structs in a cell array. This avoids assigning a populated
+    % struct into struct([]), which MATLAB treats as a dissimilar structure.
+    resultCells = cell(totalRuns, 1);
     index = 0;
 
     for r = 1:repetitions
@@ -83,12 +85,14 @@ function results = runExperimentStudy( ...
 
                 end
 
-                results(index) = result.toStruct();
+                resultCells{index} = result.toStruct();
 
             end
 
         end
 
     end
+
+    results = vertcat(resultCells{:});
 
 end
