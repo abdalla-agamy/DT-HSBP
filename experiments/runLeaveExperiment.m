@@ -1,7 +1,13 @@
 function result = runLeaveExperiment(protocolName, swarmSize, clusterID, runID, randomSeed)
-%RUNLEAVEEXPERIMENT Execute one controlled leave experiment.
+%RUNLEAVEEXPERIMENT Execute one controlled instability-driven leave.
 %
-%   Optional RUNID and RANDOMSEED parameters support repeated studies.
+%   The same initial swarm, random seed, leave requester, and controlled
+%   instability state are used for FlatSBP, HSBP, and DTHSBP.
+%
+%   One UAV requests leave. FlatSBP rekeys the whole swarm, HSBP rekeys
+%   the requester's cluster, and DTHSBP additionally removes UAVs whose
+%   DT stability score exceeds thetaLeave before performing one cluster
+%   rekey.
 
     if nargin < 2
         error('runLeaveExperiment:InvalidArguments', ...
@@ -54,7 +60,7 @@ function result = runLeaveExperiment(protocolName, swarmSize, clusterID, runID, 
             'clusterID must be an integer from 1 to %d.', cfg.numClusters);
     end
 
-    %% Build swarm
+    %% Build common initial swarm
 
     swarm = Swarm(cfg);
 
@@ -84,28 +90,54 @@ function result = runLeaveExperiment(protocolName, swarmSize, clusterID, runID, 
     result.clusterSize = cfg.clusterSize;
     result.eventCount = 1;
 
-    %% Select deterministic non-leader UAV
+    %% Common controlled leave scenario
+    %
+    % UAV 4 is the explicit requester. UAVs 2 and 3 receive the same
+    % controlled mobility disturbance used to create a DT prediction
+    % residual. The state preparation is identical for every protocol;
+    % only DTHSBP consumes the resulting DT stability information.
+
+    leavingUAVID = 4;
+    disturbedUAVIDs = [2 3];
+    positionPerturbation = [10 0];
 
     cluster = swarm.findCluster(clusterID);
-    activeUAVs = cluster.getActiveUAVs();
-    leavingUAV = [];
-
-    for i = 1:numel(activeUAVs)
-        if activeUAVs(i).id ~= swarm.leader.id
-            leavingUAV = activeUAVs(i);
-            break;
-        end
-    end
-
-    if isempty(leavingUAV)
+    if isempty(cluster)
         result.success = false;
         result.status = "Failed";
         return;
     end
 
-    %% Controlled leave
+    for i = 1:numel(disturbedUAVIDs)
+        candidate = swarm.findUAV(disturbedUAVIDs(i));
 
-    rekeyResult = protocol.leave(leavingUAV.id);
+        if isempty(candidate) || candidate.clusterID ~= clusterID
+            error('runLeaveExperiment:InvalidDisturbedUAV', ...
+                'Disturbed UAV %d is not in cluster %d.', ...
+                disturbedUAVIDs(i), clusterID);
+        end
+
+        % First update establishes the DT prediction.
+        candidate.dt.update();
+
+        % Controlled mobility divergence.
+        candidate.position = candidate.position + positionPerturbation;
+
+        % Second update computes the prediction residual/stability score.
+        candidate.dt.update();
+    end
+
+    leavingUAV = swarm.findUAV(leavingUAVID);
+
+    if isempty(leavingUAV) || leavingUAV.clusterID ~= clusterID
+        result.success = false;
+        result.status = "Failed";
+        return;
+    end
+
+    %% Single common leave request
+
+    rekeyResult = protocol.leave(leavingUAVID);
 
     %% Record outcome
 
@@ -121,7 +153,8 @@ function result = runLeaveExperiment(protocolName, swarmSize, clusterID, runID, 
     result.messageCount = rekeyResult.messagesSent;
     result.messageBytes = rekeyResult.messagesSent * cfg.messageSize;
 
-    if ~isempty(rekeyResult.predictedLeaves)
+    if isprop(rekeyResult, 'predictedLeaves') && ...
+            ~isempty(rekeyResult.predictedLeaves)
         result.predictedLeaves = rekeyResult.predictedLeaves;
     end
 
