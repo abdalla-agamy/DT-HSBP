@@ -38,21 +38,27 @@ classdef DTHSBP < HSBP
 
                 activeUAVs = cluster.getActiveUAVs();
 
-                newGroupKey = ...
-                    obj.engine.generateGroupKey(activeUAVs);
+                leaderTimer = tic;
+                newGroupKey = obj.engine.generateGroupKey(activeUAVs);
+                leaderTime = toc(leaderTimer);
 
                 cluster.groupKey = newGroupKey;
 
+                followerTimer = tic;
                 for i = 1:numel(activeUAVs)
 
                     activeUAVs(i).groupKey = newGroupKey;
                     activeUAVs(i).keySynced = true;
 
                 end
+                followerTime = toc(followerTimer);
 
                 result = obj.createRekeyResult( ...
                     activeUAVs, ...
                     clusterID);
+
+                result.leaderTime = leaderTime;
+                result.followerTime = followerTime;
 
                 obj.addCost(cluster.count());
 
