@@ -98,8 +98,9 @@ function result = runLeaveExperiment(protocolName, swarmSize, clusterID, runID, 
     end
 
     if isempty(leavingUAV)
-        error('runLeaveExperiment:NoValidUAV', ...
-            'No non-leader active UAV is available in cluster %d.', clusterID);
+        result.success = false;
+        result.status = "Failed";
+        return;
     end
 
     %% Controlled leave
@@ -109,6 +110,8 @@ function result = runLeaveExperiment(protocolName, swarmSize, clusterID, runID, 
     %% Record outcome
 
     if isempty(rekeyResult)
+        result.success = false;
+        result.status = "Rejected";
         return;
     end
 
@@ -121,5 +124,8 @@ function result = runLeaveExperiment(protocolName, swarmSize, clusterID, runID, 
     if ~isempty(rekeyResult.predictedLeaves)
         result.predictedLeaves = rekeyResult.predictedLeaves;
     end
+
+    result.success = true;
+    result.status = "Success";
 
 end
