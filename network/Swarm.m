@@ -177,13 +177,11 @@ classdef Swarm < handle
                     end
 
                     % Physical movement
-                    u.move(cfg); %cfg.timeStep
+                    u.move(cfg);
 
                     % Energy consumption
                     u.consumeEnergy();
 
-                    % DT update
-                    u.dt.update();
 
                 end
 

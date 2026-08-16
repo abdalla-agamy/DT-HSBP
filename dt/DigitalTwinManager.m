@@ -18,11 +18,13 @@ classdef DigitalTwinManager < handle
 
         %----------------------------------------------------------
         function registerUAV(obj, uav)
-            %REGISTERUAV Create a Digital Twin for a UAV.
+            %REGISTERUAV Register the Digital Twin owned by the UAV.
 
-            agent = DTAgent(uav, obj.cfg);
+            if ~isempty(obj.findAgent(uav.id))
+                return;
+            end
 
-            obj.agents(end+1) = agent;
+            obj.agents(end+1) = uav.dt;
 
         end
 

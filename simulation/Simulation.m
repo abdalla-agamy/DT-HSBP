@@ -36,6 +36,14 @@ classdef Simulation < handle
 
             obj.dtManager = DigitalTwinManager(obj.cfg);
 
+            initialUAVs = obj.swarm.getActiveUAVs();
+
+            for i = 1:numel(initialUAVs)
+
+                obj.dtManager.registerUAV(initialUAVs(i));
+
+            end
+
             obj.statistics = StatisticsManager(obj.cfg);
 
         end
