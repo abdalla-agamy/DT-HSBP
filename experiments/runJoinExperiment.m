@@ -100,6 +100,7 @@ function result = runJoinExperiment(protocolName, swarmSize, clusterID, runID, r
         result.rekeyCount = 1;
         result.leaderTime = rekeyResult.leaderTime;
         result.followerTime = rekeyResult.followerTime;
+        result.dtAdmissionTime = rekeyResult.dtAdmissionTime;
         result.messageCount = rekeyResult.messagesSent;
         result.messageBytes = rekeyResult.messagesSent * cfg.messageSize;
         result.success = true;
