@@ -46,7 +46,9 @@ function results = runExperimentSweep( ...
 
     totalRuns = numel(protocolNames) * numel(swarmSizes);
 
-    results = struct([]);
+    % Accumulate structs in a cell array to avoid structure-template
+    % incompatibility during indexed assignment.
+    resultCells = cell(totalRuns, 1);
     index = 0;
 
     for p = 1:numel(protocolNames)
@@ -71,10 +73,12 @@ function results = runExperimentSweep( ...
 
             end
 
-            results(index) = result.toStruct();
+            resultCells{index} = result.toStruct();
 
         end
 
     end
+
+    results = vertcat(resultCells{:});
 
 end
