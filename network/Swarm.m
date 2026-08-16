@@ -74,6 +74,12 @@ classdef Swarm < handle
 
                 if obj.clusters(i).removeUAV(uavID)
 
+                    if ~isempty(obj.leader) && obj.leader.id == uavID
+
+                        obj.leader = obj.clusters(1).head;
+
+                    end
+
                     return;
 
                 end

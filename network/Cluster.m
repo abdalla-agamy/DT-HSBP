@@ -38,7 +38,24 @@ classdef Cluster < handle
 
                 if obj.uavs(i).id == uavID
 
+                    wasHead = ~isempty(obj.head) && ...
+                        obj.head.id == uavID;
+
                     obj.uavs(i) = [];
+
+                    if wasHead
+
+                        if isempty(obj.uavs)
+
+                            obj.head = [];
+
+                        else
+
+                            obj.head = obj.uavs(1);
+
+                        end
+
+                    end
 
                     removed = true;
 
