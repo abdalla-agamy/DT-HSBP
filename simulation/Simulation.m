@@ -172,6 +172,8 @@ classdef Simulation < handle
             %--------------------------------------------------------------
             rekeyResult = obj.protocol.leave(uavID);
 
+            obj.dtManager.removeUAV(uavID);
+
             if ~isempty(rekeyResult)
 
                 predictedLeaves = rekeyResult.predictedLeaves;
@@ -183,19 +185,23 @@ classdef Simulation < handle
                 end
 
             end
-            if ~isempty(rekeyResult) && ...
-                    ~isempty(rekeyResult.predictedLeaves)
 
-                obj.statistics.incrementPredictedLeaves( ...
-                    numel(rekeyResult.predictedLeaves));
+            %--------------------------------------------------------------
+            % Statistics
+            %--------------------------------------------------------------
 
-                obj.statistics.recordRekey(true,rekeyResult);
+            obj.statistics.incrementLeave();
 
-            else
+            if ~isempty(rekeyResult)
 
-                obj.statistics.incrementLeave();
+                if ~isempty(rekeyResult.predictedLeaves)
 
-                if ~isempty(rekeyResult)
+                    obj.statistics.incrementPredictedLeaves( ...
+                        numel(rekeyResult.predictedLeaves));
+
+                    obj.statistics.recordRekey(true,rekeyResult);
+
+                else
 
                     obj.statistics.recordRekey(false,rekeyResult);
 
@@ -224,6 +230,8 @@ classdef Simulation < handle
             %--------------------------------------------------------------
             rekeyResult = obj.protocol.failure(uavID);
 
+            obj.dtManager.removeUAV(uavID);
+
             if ~isempty(rekeyResult)
 
                 predictedLeaves = rekeyResult.predictedLeaves;
@@ -239,18 +247,18 @@ classdef Simulation < handle
             %--------------------------------------------------------------
             % Statistics
             %--------------------------------------------------------------
-            if ~isempty(rekeyResult) && ...
-                    ~isempty(rekeyResult.predictedLeaves)
+            obj.statistics.incrementFailure();
 
-                obj.statistics.incrementPredictedLeaves( ...
-                    numel(rekeyResult.predictedLeaves));
+            if ~isempty(rekeyResult)
 
-                obj.statistics.recordRekey(true,rekeyResult);
+                if ~isempty(rekeyResult.predictedLeaves)
 
-            else
-                obj.statistics.incrementFailure();
+                    obj.statistics.incrementPredictedLeaves( ...
+                        numel(rekeyResult.predictedLeaves));
 
-                if ~isempty(rekeyResult)
+                    obj.statistics.recordRekey(true,rekeyResult);
+
+                else
 
                     obj.statistics.recordRekey(false,rekeyResult);
 
