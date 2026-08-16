@@ -81,7 +81,7 @@ classdef DTHSBP < HSBP
 
             end
 
-            cluster = obj.swarm.getCluster(uav.clusterID);
+            cluster = obj.swarm.findCluster(uav.clusterID);
 
             predictedLeaves = [];
 
@@ -144,8 +144,8 @@ classdef DTHSBP < HSBP
 
             end
 
-            cluster = obj.swarm.getCluster(uav.clusterID);
-
+            cluster = obj.swarm.findCluster(uav.clusterID);
+            
             predictedLeaves = [];
 
             if ~isempty(cluster)
