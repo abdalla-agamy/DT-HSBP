@@ -168,10 +168,33 @@ classdef Simulation < handle
             end
 
             %--------------------------------------------------------------
-            % Predict additional departures
+            % Predict additional departures for DT-HSBP only
             %--------------------------------------------------------------
-            predictedLeaves = ...
-                obj.dtManager.findUnstableUAVs(uavID);
+            predictedLeaves = [];
+
+            if isa(obj.protocol,"DTHSBP")
+
+                allPredictedLeaves = ...
+                    obj.dtManager.findUnstableUAVs(uavID);
+
+                predictedLeaves = [];
+
+                for i = 1:numel(allPredictedLeaves)
+
+                    predictedUAV = ...
+                        obj.swarm.findUAV(allPredictedLeaves(i));
+
+                    if ~isempty(predictedUAV) && ...
+                            predictedUAV.clusterID == uav.clusterID
+
+                        predictedLeaves(end+1) = ...
+                            allPredictedLeaves(i);
+
+                    end
+
+                end
+
+            end
 
             for i = 1:numel(predictedLeaves)
 
@@ -235,10 +258,33 @@ classdef Simulation < handle
             end
 
             %--------------------------------------------------------------
-            % Predict additional failures
+            % Predict additional departures for DT-HSBP only
             %--------------------------------------------------------------
-            predictedLeaves = ...
-                obj.dtManager.findUnstableUAVs(uavID);
+            predictedLeaves = [];
+
+            if isa(obj.protocol,"DTHSBP")
+
+                allPredictedLeaves = ...
+                    obj.dtManager.findUnstableUAVs(uavID);
+
+                predictedLeaves = [];
+
+                for i = 1:numel(allPredictedLeaves)
+
+                    predictedUAV = ...
+                        obj.swarm.findUAV(allPredictedLeaves(i));
+
+                    if ~isempty(predictedUAV) && ...
+                            predictedUAV.clusterID == uav.clusterID
+
+                        predictedLeaves(end+1) = ...
+                            allPredictedLeaves(i);
+
+                    end
+
+                end
+
+            end
 
             for i = 1:numel(predictedLeaves)
 
