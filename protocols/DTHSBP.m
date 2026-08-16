@@ -21,15 +21,24 @@ classdef DTHSBP < HSBP
 
             cfg = obj.cfg;
 
+            % DT admission timing covers candidate construction, the DT
+            % prediction update, and the admission decision. It is kept
+            % separate from leader/follower rekey timing.
+            dtAdmissionTimer = tic;
+
             % Create candidate UAV using the ID reserved by EventFactory
             candidate = UAV(uavID,clusterID,cfg);
 
             % DT evaluation
             candidate.dt.update();
 
-            if StabilityModel.canJoin( ...
+            canJoin = StabilityModel.canJoin( ...
                     candidate.dt.stabilityScore, ...
-                    cfg)
+                    cfg);
+
+            dtAdmissionTime = toc(dtAdmissionTimer);
+
+            if canJoin
 
                 obj.swarm.clusters(clusterID).addUAV(candidate);
 
@@ -59,6 +68,7 @@ classdef DTHSBP < HSBP
 
                 result.leaderTime = leaderTime;
                 result.followerTime = followerTime;
+                result.dtAdmissionTime = dtAdmissionTime;
 
                 obj.addCost(cluster.count());
 
