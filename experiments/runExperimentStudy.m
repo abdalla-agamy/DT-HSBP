@@ -56,7 +56,7 @@ function results = runExperimentStudy( ...
     totalRuns = numel(protocolNames) * ...
         numel(swarmSizes) * repetitions;
 
-    results = repmat(struct(), totalRuns, 1);
+    results = struct([]);
     index = 0;
 
     for r = 1:repetitions
