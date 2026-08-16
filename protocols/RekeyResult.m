@@ -37,6 +37,9 @@ classdef RekeyResult
 
         followerTime = 0
 
+        % DT-specific admission timing. Zero for non-DT protocols.
+        dtAdmissionTime = 0
+
     end
 
 end
