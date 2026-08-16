@@ -27,6 +27,7 @@ classdef ExperimentResult < handle
         % Performance measurements
         leaderTime = 0
         followerTime = 0
+        dtAdmissionTime = 0
         messageCount = 0
         messageBytes = 0
 
