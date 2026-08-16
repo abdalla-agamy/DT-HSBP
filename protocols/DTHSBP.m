@@ -51,8 +51,8 @@ classdef DTHSBP < HSBP
                 end
 
                 result = obj.createRekeyResult( ...
-    activeUAVs, ...
-    clusterID);
+                    activeUAVs, ...
+                    clusterID);
 
                 obj.addCost(cluster.count());
 
@@ -71,41 +71,119 @@ classdef DTHSBP < HSBP
 
         function result = leave(obj,uavID)
 
-            u = obj.swarm.findUAV(uavID);
+            uav = obj.swarm.findUAV(uavID);
 
-            if isempty(u)
-                result =[];
+            if isempty(uav)
+
+                result = [];
+
                 return;
+
             end
 
-            if u.dt.stabilityScore > obj.cfg.thetaLeave
+            cluster = obj.swarm.getCluster(uav.clusterID);
 
-                fprintf("DT detected unstable UAV %d\n",u.id);
+            predictedLeaves = [];
+
+            if ~isempty(cluster)
+
+                members = cluster.getActiveUAVs();
+
+                for i = 1:numel(members)
+
+                    candidate = members(i);
+
+                    if candidate.id == uavID
+                        continue;
+                    end
+
+                    if candidate.dt.stabilityScore > ...
+                            obj.cfg.thetaLeave
+
+                        predictedLeaves(end+1) = candidate.id;
+
+                    end
+
+                end
+
+            end
+
+            for i = 1:numel(predictedLeaves)
+
+                obj.swarm.removeUAV(predictedLeaves(i));
 
             end
 
             result = leave@HSBP(obj,uavID);
 
+            if ~isempty(result)
+
+                result.predictedLeaves = predictedLeaves;
+
+            end
+
         end
 
         %--------------------------------------------
 
-        function result=failure(obj,uavID)
+        function result = failure(obj,uavID)
 
-            u = obj.swarm.findUAV(uavID);
+            uav = obj.swarm.findUAV(uavID);
 
-            if isempty(u)
-                result =[];
+            if isempty(uav)
+
+                result = [];
+
                 return;
+
             end
 
-            if u.dt.stabilityScore > obj.cfg.stabilityThreshold
+            if uav.dt.stabilityScore > obj.cfg.stabilityThreshold
 
-                fprintf("DT detected Failed UAV %d\n",u.id);
+                fprintf("DT detected Failed UAV %d\n",uav.id);
+
+            end
+
+            cluster = obj.swarm.getCluster(uav.clusterID);
+
+            predictedLeaves = [];
+
+            if ~isempty(cluster)
+
+                members = cluster.getActiveUAVs();
+
+                for i = 1:numel(members)
+
+                    candidate = members(i);
+
+                    if candidate.id == uavID
+                        continue;
+                    end
+
+                    if candidate.dt.stabilityScore > ...
+                            obj.cfg.thetaLeave
+
+                        predictedLeaves(end+1) = candidate.id;
+
+                    end
+
+                end
+
+            end
+
+            for i = 1:numel(predictedLeaves)
+
+                obj.swarm.removeUAV(predictedLeaves(i));
 
             end
 
             result = failure@HSBP(obj,uavID);
+
+            if ~isempty(result)
+
+                result.predictedLeaves = predictedLeaves;
+
+            end
 
         end
 

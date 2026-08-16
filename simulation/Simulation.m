@@ -168,66 +168,28 @@ classdef Simulation < handle
             end
 
             %--------------------------------------------------------------
-            % Predict additional departures for DT-HSBP only
-            %--------------------------------------------------------------
-            predictedLeaves = [];
-
-            if isa(obj.protocol,"DTHSBP")
-
-                allPredictedLeaves = ...
-                    obj.dtManager.findUnstableUAVs(uavID);
-
-                predictedLeaves = [];
-
-                for i = 1:numel(allPredictedLeaves)
-
-                    predictedUAV = ...
-                        obj.swarm.findUAV(allPredictedLeaves(i));
-
-                    if ~isempty(predictedUAV) && ...
-                            predictedUAV.clusterID == uav.clusterID
-
-                        predictedLeaves(end+1) = ...
-                            allPredictedLeaves(i);
-
-                    end
-
-                end
-
-            end
-
-            for i = 1:numel(predictedLeaves)
-
-                predictedID = predictedLeaves(i);
-
-                obj.dtManager.removeUAV(predictedID);
-                obj.swarm.removeUAV(predictedID);
-
-            end
-
-            %--------------------------------------------------------------
-            % Remove Digital Twin of requested UAV
-            %--------------------------------------------------------------
-            obj.dtManager.removeUAV(uavID);
-
-            %--------------------------------------------------------------
-            % Protocol owns requested UAV removal and rekey
+            % Protocol owns requested and predicted UAV removal
             %--------------------------------------------------------------
             rekeyResult = obj.protocol.leave(uavID);
 
-            %--------------------------------------------------------------
-            % Statistics
-            %--------------------------------------------------------------
-            if ~isempty(predictedLeaves)
+            if ~isempty(rekeyResult)
 
-                obj.statistics.incrementPredictedLeaves( ...
-                    numel(predictedLeaves));
+                predictedLeaves = rekeyResult.predictedLeaves;
 
-                if ~isempty(rekeyResult)
+                for i = 1:numel(predictedLeaves)
 
-                    obj.statistics.recordRekey(true,rekeyResult);
+                    obj.dtManager.removeUAV(predictedLeaves(i));
 
                 end
+
+            end
+            if ~isempty(rekeyResult) && ...
+                    ~isempty(rekeyResult.predictedLeaves)
+
+                obj.statistics.incrementPredictedLeaves( ...
+                    numel(rekeyResult.predictedLeaves));
+
+                obj.statistics.recordRekey(true,rekeyResult);
 
             else
 
@@ -258,69 +220,34 @@ classdef Simulation < handle
             end
 
             %--------------------------------------------------------------
-            % Predict additional departures for DT-HSBP only
+            % Protocol owns requested and predicted UAV removal
             %--------------------------------------------------------------
-            predictedLeaves = [];
+            rekeyResult = obj.protocol.failure(uavID);
 
-            if isa(obj.protocol,"DTHSBP")
+            if ~isempty(rekeyResult)
 
-                allPredictedLeaves = ...
-                    obj.dtManager.findUnstableUAVs(uavID);
+                predictedLeaves = rekeyResult.predictedLeaves;
 
-                predictedLeaves = [];
+                for i = 1:numel(predictedLeaves)
 
-                for i = 1:numel(allPredictedLeaves)
-
-                    predictedUAV = ...
-                        obj.swarm.findUAV(allPredictedLeaves(i));
-
-                    if ~isempty(predictedUAV) && ...
-                            predictedUAV.clusterID == uav.clusterID
-
-                        predictedLeaves(end+1) = ...
-                            allPredictedLeaves(i);
-
-                    end
+                    obj.dtManager.removeUAV(predictedLeaves(i));
 
                 end
 
             end
-
-            for i = 1:numel(predictedLeaves)
-
-                predictedID = predictedLeaves(i);
-
-                obj.dtManager.removeUAV(predictedID);
-                obj.swarm.removeUAV(predictedID);
-
-            end
-
-            %--------------------------------------------------------------
-            % Remove Digital Twin of failed UAV
-            %--------------------------------------------------------------
-            obj.dtManager.removeUAV(uavID);
-
-            %--------------------------------------------------------------
-            % Protocol owns failure removal and rekey
-            %--------------------------------------------------------------
-            rekeyResult = obj.protocol.failure(uavID);
 
             %--------------------------------------------------------------
             % Statistics
             %--------------------------------------------------------------
-            if ~isempty(predictedLeaves)
+            if ~isempty(rekeyResult) && ...
+                    ~isempty(rekeyResult.predictedLeaves)
 
                 obj.statistics.incrementPredictedLeaves( ...
-                    numel(predictedLeaves));
+                    numel(rekeyResult.predictedLeaves));
 
-                if ~isempty(rekeyResult)
-
-                    obj.statistics.recordRekey(true,rekeyResult);
-
-                end
+                obj.statistics.recordRekey(true,rekeyResult);
 
             else
-
                 obj.statistics.incrementFailure();
 
                 if ~isempty(rekeyResult)
