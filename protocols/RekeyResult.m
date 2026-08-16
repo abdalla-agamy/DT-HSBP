@@ -30,6 +30,13 @@ classdef RekeyResult
 
         randomNumbers = 0
 
+        %----------------------------------------------------------
+        % Execution timing
+        %----------------------------------------------------------
+        leaderTime = 0
+
+        followerTime = 0
+
     end
 
 end
