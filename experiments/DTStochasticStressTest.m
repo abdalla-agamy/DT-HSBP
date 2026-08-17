@@ -44,16 +44,6 @@ function report = DTStochasticStressTest(protocolName, swarmSize, randomSeed)
     sim.updateDigitalTwins();
 
     targetCluster = 1;
-    members = swarm.findCluster(targetCluster).getActiveUAVs();
-
-    if numel(members) < 4
-        error('DTStochasticStressTest:Population', ...
-            'Target cluster must contain at least four active UAVs.');
-    end
-
-    disturbedIDs = [members(2).id, members(3).id];
-    leavingID = members(4).id;
-
     disturbanceTime = 40.0;
     leaveTime = 41.0;
     perturbation = [10 0];
@@ -64,8 +54,21 @@ function report = DTStochasticStressTest(protocolName, swarmSize, randomSeed)
         sim.step();
     end
 
+    % Select the affected UAVs from the population that actually exists at
+    % the disturbance time. This avoids assuming that the initial members
+    % survived the preceding stochastic workload.
+    members = swarm.findCluster(targetCluster).getActiveUAVs();
+
+    if numel(members) < 4
+        error('DTStochasticStressTest:Population', ...
+            'Target cluster must contain at least four active UAVs.');
+    end
+
+    disturbedIDs = [members(2).id, members(3).id];
+    leavingID = members(4).id;
+
     % Apply a deterministic physical disturbance to two UAVs in the target
-    % cluster so that the already-established DT prediction becomes stale.
+    % cluster so that the established DT prediction becomes stale.
     for i = 1:numel(disturbedIDs)
         uav = swarm.findUAV(disturbedIDs(i));
         if ~isempty(uav)
@@ -73,7 +76,11 @@ function report = DTStochasticStressTest(protocolName, swarmSize, randomSeed)
         end
     end
 
-    % Force a DT update at the disturbance time so the residual is observed.
+    % Observe the disturbance now. This deliberately leaves the resulting
+    % high stability scores in the DT agents until the explicit leave below.
+    % The next normal DT update is intentionally not performed before the
+    % leave request, otherwise the one-step disturbance would be absorbed
+    % into a new prediction and the score would return toward zero.
     sim.updateDigitalTwins();
 
     disturbedScores = zeros(1, numel(disturbedIDs));
@@ -84,10 +91,11 @@ function report = DTStochasticStressTest(protocolName, swarmSize, randomSeed)
         end
     end
 
-    % Advance only until the next second and issue one explicit leave.
+    % Advance physical time by one second without refreshing the DTs. This
+    % preserves the observed disturbance scores until the leave decision at
+    % t=41 s.
     while sim.currentTime < leaveTime
         sim.swarm.step(cfg);
-        sim.updateDigitalTwins();
         sim.currentTime = sim.currentTime + cfg.timeStep;
     end
 
