@@ -18,11 +18,13 @@ PARALLEL_EXECUTION = false;     % false = normal, true = Parallel Toolbox
 
 PROTOCOLS   = ["FlatSBP","HSBP","DTHSBP"];
 SWARM_SIZES = [1000 2000 3000 4000 5000];
-REPETITIONS = 10;
+REPETITIONS = 3;
 BASE_SEED   = 42;
 
 %% ========================= RUN STUDY ==================================
 clearvars -except PARALLEL_EXECUTION PROTOCOLS SWARM_SIZES REPETITIONS BASE_SEED
+clc
+close all
 
 fprintf('============================================\n');
 fprintf('Stochastic Experiment\n');
