@@ -1,13 +1,22 @@
-function results = runStochasticStudy(protocols, swarmSizes, repetitions, baseSeed)
+function results = runStochasticStudy(protocols, swarmSizes, repetitions, baseSeed, varargin)
 %RUNSTOCHASTICSTUDY Execute repeated Poisson-driven stochastic studies.
 %
 % RESULTS = RUNSTOCHASTICSTUDY(PROTOCOLS,SWARMSIZES,REPETITIONS,BASESEED)
 % runs the existing stochastic simulation independently for every
 % protocol/swarm-size/repetition combination.
 %
+% Optional name-value:
+%   'UseParallel' - true uses parfor when Parallel Computing Toolbox is
+%                   available; false uses the normal for-loop.
+%
 % The stochastic workload uses config.m rates and simulation settings.
 % Warm-up is intentionally not performed here: every observation is a
 % complete independent stochastic simulation and its seed is explicit.
+
+    p = inputParser;
+    addParameter(p,'UseParallel',false,@(x)islogical(x) && isscalar(x));
+    parse(p,varargin{:});
+    useParallel = p.Results.UseParallel;
 
     if nargin < 1 || isempty(protocols)
         protocols = ["FlatSBP","HSBP","DTHSBP"];
@@ -46,18 +55,52 @@ function results = runStochasticStudy(protocols, swarmSizes, repetitions, baseSe
             'baseSeed must be a non-negative integer.');
     end
 
+    if useParallel && ~license('test','Distrib_Computing_Toolbox')
+        error('runStochasticStudy:ParallelToolboxRequired', ...
+            ['UseParallel=true requires the Parallel Computing Toolbox. ' ...
+             'Install/enable it or set UseParallel=false.']);
+    end
+
     totalRuns = numel(protocols) * numel(swarmSizes) * repetitions;
     results = repmat(emptyResult(), totalRuns, 1);
 
+    % Build an explicit run plan so that serial and parallel execution use
+    % exactly the same protocol/N/repetition/seed combinations and return
+    % the same ordering.
+    runPlan = repmat(struct( ...
+        'protocol',"", ...
+        'swarmSize',0, ...
+        'runID',0, ...
+        'seed',0), totalRuns, 1);
+
     index = 0;
-    for p = 1:numel(protocols)
-        for n = 1:numel(swarmSizes)
+    for pIndex = 1:numel(protocols)
+        for nIndex = 1:numel(swarmSizes)
             for r = 1:repetitions
                 index = index + 1;
-                seed = baseSeed + r - 1;
-                results(index) = runStochasticExperiment( ...
-                    protocols(p), swarmSizes(n), r, seed);
+                runPlan(index).protocol = protocols(pIndex);
+                runPlan(index).swarmSize = swarmSizes(nIndex);
+                runPlan(index).runID = r;
+                runPlan(index).seed = baseSeed + r - 1;
             end
+        end
+    end
+
+    if useParallel
+        % Each run constructs its own swarm/simulation and sets its own RNG
+        % seed inside runStochasticExperiment, so workers do not share
+        % experiment state. Assign one complete stochastic run to each
+        % iteration rather than parallelizing individual simulation steps.
+        parfor k = 1:totalRuns
+            plan = runPlan(k);
+            results(k) = runStochasticExperiment( ...
+                plan.protocol, plan.swarmSize, plan.runID, plan.seed);
+        end
+    else
+        for k = 1:totalRuns
+            plan = runPlan(k);
+            results(k) = runStochasticExperiment( ...
+                plan.protocol, plan.swarmSize, plan.runID, plan.seed);
         end
     end
 end
