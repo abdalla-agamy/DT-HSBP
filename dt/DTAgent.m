@@ -44,7 +44,7 @@ classdef DTAgent < handle
                     Predictor.predict(obj.state,...
                     obj.cfg.predictionHorizon, obj.cfg);
 
-                obj.clearExpiredPrediction(obj.predictionTime());
+                obj.clearExpiredPrediction(obj.getCurrentTime());
                 return
 
             end
@@ -58,7 +58,7 @@ classdef DTAgent < handle
             obj.stabilityScore = obj.residual;
             obj.state = actual;
 
-            currentTime = obj.predictionTime();
+            currentTime = obj.getCurrentTime();
             if StabilityModel.shouldLeave(obj.stabilityScore,obj.cfg)
                 obj.predictedLeave = true;
                 obj.predictionTime = currentTime;
@@ -90,7 +90,7 @@ classdef DTAgent < handle
 
         function tf = hasPredictedLeave(obj,currentTime)
             if nargin < 2
-                currentTime = obj.predictionTime();
+                currentTime = obj.getCurrentTime();
             end
             obj.clearExpiredPrediction(currentTime);
             tf = obj.predictedLeave;
@@ -108,7 +108,7 @@ classdef DTAgent < handle
     end
 
     methods (Access = private)
-        function t = predictionTime(obj)
+        function t = getCurrentTime(obj)
             % DTAgent does not own simulation time. The simulation injects a
             % current-time marker through cfg when available; otherwise use
             % zero for initialization-only operations.
