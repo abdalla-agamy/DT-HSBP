@@ -8,13 +8,17 @@ classdef DTAgent < handle
         residual
         stabilityScore
 
+        % Persistent prediction state. A threshold crossing creates a
+        % one-step predicted-departure candidate that remains valid until
+        % its expiry time or until it is explicitly consumed/cancelled.
+        predictedLeave = false
+        predictionTime = NaN
+        predictionExpiry = NaN
 
-        initialized = false;
-        %hasPrediction = false;
+        initialized = false
 
         uav
         cfg
-
 
     end
 
@@ -30,10 +34,7 @@ classdef DTAgent < handle
 
         end
 
-        %---------------------------------------
-
         function update(obj)
-%             fprintf('DTAgent.update() called\n');
 
             if isempty(obj.predictedState)
 
@@ -43,6 +44,7 @@ classdef DTAgent < handle
                     Predictor.predict(obj.state,...
                     obj.cfg.predictionHorizon, obj.cfg);
 
+                obj.clearExpiredPrediction(obj.predictionTime());
                 return
 
             end
@@ -54,8 +56,20 @@ classdef DTAgent < handle
                 obj.predictedState, obj.cfg);
 
             obj.stabilityScore = obj.residual;
-
             obj.state = actual;
+
+            currentTime = obj.predictionTime();
+            if StabilityModel.shouldLeave(obj.stabilityScore,obj.cfg)
+                obj.predictedLeave = true;
+                obj.predictionTime = currentTime;
+                obj.predictionExpiry = currentTime + obj.cfg.predictionHorizon;
+            elseif ~obj.predictedLeave
+                obj.predictedLeave = false;
+                obj.predictionTime = NaN;
+                obj.predictionExpiry = NaN;
+            else
+                obj.clearExpiredPrediction(currentTime);
+            end
 
             obj.predictedState = ...
                 Predictor.predict(actual,...
@@ -63,23 +77,54 @@ classdef DTAgent < handle
 
         end
 
-
         function observe(obj,uav)
-
-           obj.state = DTState(obj.uav);
-
-           obj.initialized = true;
+            obj.state = DTState(uav);
+            obj.initialized = true;
         end
 
         function stable = isStable(obj)
-
             stable = StabilityModel.isStable( ...
                 obj.stabilityScore, ...
                 obj.cfg);
-
-
         end
 
+        function tf = hasPredictedLeave(obj,currentTime)
+            if nargin < 2
+                currentTime = obj.predictionTime();
+            end
+            obj.clearExpiredPrediction(currentTime);
+            tf = obj.predictedLeave;
+        end
+
+        function consumePrediction(obj)
+            obj.predictedLeave = false;
+            obj.predictionTime = NaN;
+            obj.predictionExpiry = NaN;
+        end
+
+        function cancelPrediction(obj)
+            obj.consumePrediction();
+        end
+    end
+
+    methods (Access = private)
+        function t = predictionTime(obj)
+            % DTAgent does not own simulation time. The simulation injects a
+            % current-time marker through cfg when available; otherwise use
+            % zero for initialization-only operations.
+            if isfield(obj.cfg,'currentTime')
+                t = obj.cfg.currentTime;
+            else
+                t = 0;
+            end
+        end
+
+        function clearExpiredPrediction(obj,currentTime)
+            if obj.predictedLeave && ~isnan(obj.predictionExpiry) && ...
+                    currentTime > obj.predictionExpiry
+                obj.consumePrediction();
+            end
+        end
     end
 
 end
