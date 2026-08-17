@@ -8,11 +8,11 @@
 % Toolbox execution.
 
 %% ========================= USER OPTIONS ================================
-PARALLEL_EXECUTION = true;      % false = serial, true = parallel
+PARALLEL_EXECUTION = false;      % false = serial, true = parallel
 
 PROTOCOLS   = ["FlatSBP","HSBP","DTHSBP"];
 SWARM_SIZES = [1000 2000 3000 4000 5000];
-REPETITIONS = 3;
+REPETITIONS = 1;
 BASE_SEED   = 42;
 
 %% ========================= RUN STUDY ==================================

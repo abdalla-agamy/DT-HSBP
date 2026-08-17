@@ -90,6 +90,11 @@ classdef Simulation < handle
             obj.cfg.currentTime = obj.currentTime;
             obj.updateDigitalTwins();
 
+            %--------------------------------------------------------------
+            % 7. Materialize persistent DT predicted departures
+            %--------------------------------------------------------------
+            obj.schedulePredictedDepartures()
+
         end
 
         function events = createDisturbanceEvents(obj, count)
@@ -152,6 +157,90 @@ classdef Simulation < handle
             index = eligible(randi(numel(eligible)));
             cluster = obj.swarm.clusters(index);
         end
+
+        function processPredictedDeparture(obj,uavID,reason)
+
+            uav = obj.swarm.findUAV(uavID);
+
+            if isempty(uav) || ~uav.active
+                return;
+            end
+
+            % A DT-predicted departure is an actual membership departure.
+            % Route it through the normal protocol Leave path so that DTHSBP
+            % can perform its cluster-local batch rekey.
+            obj.processLeaveRequest(uavID);
+
+        end
+
+        function schedulePredictedDepartures(obj)
+
+    % This mechanism is relevant only to DTHSBP.
+    if ~isa(obj.protocol,"DTHSBP")
+        return;
+    end
+
+    % Keep the existing stochastic benchmark unchanged unless the
+    % DT-predicted departure mechanism is explicitly enabled.
+    enabled = false;
+
+    if isfield(obj.cfg,'dtPredictedDepartureEnabled')
+        enabled = logical(obj.cfg.dtPredictedDepartureEnabled);
+    end
+
+    if ~enabled
+        return;
+    end
+
+    currentTime = obj.currentTime;
+    departureTime = currentTime + obj.cfg.predictionHorizon;
+
+    activeUAVs = obj.swarm.getActiveUAVs();
+
+    for i = 1:numel(activeUAVs)
+
+        uav = activeUAVs(i);
+
+        if isempty(uav.dt)
+            continue;
+        end
+
+        % Only schedule a prediction that was CREATED at the current
+        % simulation time. This prevents the same persistent prediction
+        % from being scheduled repeatedly on subsequent steps.
+        if ~uav.dt.predictedLeave
+            continue;
+        end
+
+        if isnan(uav.dt.predictionTime)
+            continue;
+        end
+
+        if abs(uav.dt.predictionTime - currentTime) > 1e-12
+            continue;
+        end
+
+        % Optional stochastic realization probability.
+        probability = 1.0;
+
+        if isfield(obj.cfg,'dtPredictedDepartureProbability')
+            probability = obj.cfg.dtPredictedDepartureProbability;
+        end
+
+        probability = max(0,min(1,probability));
+
+        if rand() > probability
+            continue;
+        end
+
+        obj.eventQueue.schedule( ...
+            DTPredictedDepartureEvent( ...
+                departureTime, ...
+                uav.id, ...
+                "DT-predicted instability"));
+    end
+
+end
 
         function run(obj)
             while obj.currentTime < obj.cfg.simulationTime

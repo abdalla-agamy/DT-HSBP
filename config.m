@@ -51,7 +51,7 @@ cfg.mtu          = 1500;      % Bytes
 %  Simulation
 % ================================
 cfg.timeStep     = 1;         % Second
-cfg.simulationTime = 100;     % Seconds
+cfg.simulationTime = 10;     % Seconds
 
 %% ===============================
 % Stochastic Event Model
@@ -67,12 +67,15 @@ cfg.failureRate = 0.1;    % λF (failures/second)
 % normal Poisson Join/Leave/Failure baseline remains unchanged.
 % When enabled, each simulation step samples
 % N_D ~ Poisson(dtDisturbanceRate * timeStep).
-cfg.dtDisturbanceEnabled = false;
+cfg.dtDisturbanceEnabled = true;
 cfg.dtDisturbanceRate = 0.05;       % disturbances/second
 cfg.dtDisturbanceUAVCount = 2;      % affected UAVs per disturbance
 cfg.dtDisturbancePositionStep = [10 0];
 cfg.dtDisturbanceVelocityStep = [0 0];
 cfg.dtDisturbanceEnergyDrop = 0;
+
+cfg.dtPredictedDepartureEnabled = true;
+cfg.dtPredictedDepartureProbability = 1.0;
 
 %% ===============================
 % Residual Weights
