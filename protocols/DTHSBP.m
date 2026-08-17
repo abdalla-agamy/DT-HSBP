@@ -2,207 +2,123 @@ classdef DTHSBP < HSBP
     methods
 
         function obj = DTHSBP(swarm)
-
             obj@HSBP(swarm);
-
         end
-
-        %--------------------------------------------
 
         function initialize(obj)
-
             fprintf("DTHSBP initialized\n");
-
         end
 
-        %--------------------------------------------
-
         function result = join(obj,uavID,clusterID)
-
             cfg = obj.cfg;
-
-            % DT admission timing covers candidate construction, the DT
-            % prediction update, and the admission decision. It is kept
-            % separate from leader/follower rekey timing.
             dtAdmissionTimer = tic;
 
-            % Create candidate UAV using the ID reserved by EventFactory
             candidate = UAV(uavID,clusterID,cfg);
-
-            % DT evaluation
             candidate.dt.update();
 
             canJoin = StabilityModel.canJoin( ...
-                    candidate.dt.stabilityScore, ...
-                    cfg);
+                candidate.dt.stabilityScore, cfg);
 
             dtAdmissionTime = toc(dtAdmissionTimer);
 
             if canJoin
-
                 obj.swarm.clusters(clusterID).addUAV(candidate);
-
-                % Rekey affected cluster
                 cluster = obj.swarm.findCluster(clusterID);
-
                 activeUAVs = cluster.getActiveUAVs();
 
                 leaderTimer = tic;
                 newGroupKey = obj.engine.generateGroupKey(activeUAVs);
                 leaderTime = toc(leaderTimer);
-
                 cluster.groupKey = newGroupKey;
 
                 followerTimer = tic;
                 for i = 1:numel(activeUAVs)
-
                     activeUAVs(i).groupKey = newGroupKey;
                     activeUAVs(i).keySynced = true;
-
                 end
                 followerTime = toc(followerTimer);
 
-                result = obj.createRekeyResult( ...
-                    activeUAVs, ...
-                    clusterID);
-
+                result = obj.createRekeyResult(activeUAVs, clusterID);
                 result.leaderTime = leaderTime;
                 result.followerTime = followerTime;
                 result.dtAdmissionTime = dtAdmissionTime;
 
                 obj.addCost(cluster.count());
-
                 obj.recordJoin();
-
             else
                 result = [];
-
                 fprintf("Join rejected by DT.\n");
-
             end
-
         end
 
-        %--------------------------------------------
-
         function result = leave(obj,uavID)
-
             uav = obj.swarm.findUAV(uavID);
-
             if isempty(uav)
-
                 result = [];
-
                 return;
-
             end
 
             cluster = obj.swarm.findCluster(uav.clusterID);
-
-            predictedLeaves = [];
-
-            if ~isempty(cluster)
-
-                members = cluster.getActiveUAVs();
-
-                for i = 1:numel(members)
-
-                    candidate = members(i);
-
-                    if candidate.id == uavID
-                        continue;
-                    end
-
-                    if candidate.dt.stabilityScore > ...
-                            obj.cfg.thetaLeave
-
-                        predictedLeaves(end+1) = candidate.id;
-
-                    end
-
-                end
-
-            end
+            predictedLeaves = obj.collectPredictedLeaves(cluster, uavID);
 
             for i = 1:numel(predictedLeaves)
-
                 obj.swarm.removeUAV(predictedLeaves(i));
-
             end
 
             result = leave@HSBP(obj,uavID);
 
             if ~isempty(result)
-
                 result.predictedLeaves = predictedLeaves;
-
             end
-
         end
 
-        %--------------------------------------------
-
         function result = failure(obj,uavID)
-
             uav = obj.swarm.findUAV(uavID);
-
             if isempty(uav)
-
                 result = [];
-
                 return;
-
             end
 
             if uav.dt.stabilityScore > obj.cfg.stabilityThreshold
-
                 fprintf("DT detected Failed UAV %d\n",uav.id);
-
             end
 
             cluster = obj.swarm.findCluster(uav.clusterID);
-            
-            predictedLeaves = [];
-
-            if ~isempty(cluster)
-
-                members = cluster.getActiveUAVs();
-
-                for i = 1:numel(members)
-
-                    candidate = members(i);
-
-                    if candidate.id == uavID
-                        continue;
-                    end
-
-                    if candidate.dt.stabilityScore > ...
-                            obj.cfg.thetaLeave
-
-                        predictedLeaves(end+1) = candidate.id;
-
-                    end
-
-                end
-
-            end
+            predictedLeaves = obj.collectPredictedLeaves(cluster, uavID);
 
             for i = 1:numel(predictedLeaves)
-
                 obj.swarm.removeUAV(predictedLeaves(i));
-
             end
 
             result = failure@HSBP(obj,uavID);
 
             if ~isempty(result)
-
                 result.predictedLeaves = predictedLeaves;
-
             end
-
         end
-
     end
 
+    methods (Access = private)
+        function predictedLeaves = collectPredictedLeaves(obj, cluster, excludedUAVID)
+            predictedLeaves = [];
+            if isempty(cluster)
+                return;
+            end
+
+            currentTime = obj.cfg.currentTime;
+            members = cluster.getActiveUAVs();
+
+            for i = 1:numel(members)
+                candidate = members(i);
+                if candidate.id == excludedUAVID
+                    continue;
+                end
+
+                if candidate.dt.hasPredictedLeave(currentTime)
+                    predictedLeaves(end+1) = candidate.id;
+                    candidate.dt.consumePrediction();
+                end
+            end
+        end
+    end
 end
