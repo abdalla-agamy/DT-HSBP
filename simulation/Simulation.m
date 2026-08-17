@@ -46,6 +46,8 @@ classdef Simulation < handle
 
         function step(obj)
 
+            obj.cfg.currentTime = obj.currentTime;
+
             %--------------------------------------------------------------
             % 1. Generate stochastic membership events
             %--------------------------------------------------------------
@@ -82,19 +84,11 @@ classdef Simulation < handle
 
             %--------------------------------------------------------------
             % 6. Advance physical state and Digital Twin observation
-            %
-            % A disturbance is applied before the physical step. Therefore
-            % the next DT update compares the disturbed state at t+dt
-            % against the prediction that was made for t+dt, preserving
-            % the intended one-step prediction residual.
             %--------------------------------------------------------------
             obj.swarm.step(obj.cfg);
-            obj.updateDigitalTwins();
-
-            %--------------------------------------------------------------
-            % 7. Advance simulation time
-            %--------------------------------------------------------------
             obj.currentTime = obj.currentTime + obj.cfg.timeStep;
+            obj.cfg.currentTime = obj.currentTime;
+            obj.updateDigitalTwins();
 
         end
 
@@ -160,166 +154,106 @@ classdef Simulation < handle
         end
 
         function run(obj)
-
             while obj.currentTime < obj.cfg.simulationTime
                 obj.step();
             end
-
         end
 
         function processEvents(obj)
-
             dueEvents = obj.eventQueue.popDueEvents(obj.currentTime);
-
             for i = 1:numel(dueEvents)
                 dueEvents{i}.execute(obj);
             end
-
         end
 
         function processJoinRequest(obj,uavID,clusterID)
-
-            %--------------------------------------------------------------
-            % Protocol-specific admission and join
-            %--------------------------------------------------------------
             rekeyResult = obj.protocol.join(uavID,clusterID);
 
-            %--------------------------------------------------------------
-            % Join rejected
-            %--------------------------------------------------------------
             if isempty(rekeyResult)
                 obj.statistics.incrementRejectedJoin();
                 return;
             end
 
-            %--------------------------------------------------------------
-            % Register Digital Twin after successful admission
-            %--------------------------------------------------------------
             uav = obj.swarm.findUAV(uavID);
-
             if ~isempty(uav)
                 obj.dtManager.registerUAV(uav);
             end
 
-            %--------------------------------------------------------------
-            % Statistics
-            %--------------------------------------------------------------
             obj.statistics.incrementJoin();
             obj.statistics.recordRekey(false,rekeyResult);
-
         end
 
         function processLeaveRequest(obj,uavID)
-
             decision = obj.makeLeaveDecision(uavID);
-
             if ~decision.approved
                 return;
             end
 
             uav = obj.swarm.findUAV(uavID);
-
             if isempty(uav)
                 return;
             end
 
-            %--------------------------------------------------------------
-            % Protocol owns requested and predicted UAV removal
-            %--------------------------------------------------------------
             rekeyResult = obj.protocol.leave(uavID);
-
             obj.dtManager.removeUAV(uavID);
 
             if ~isempty(rekeyResult)
-
                 predictedLeaves = rekeyResult.predictedLeaves;
-
                 for i = 1:numel(predictedLeaves)
                     obj.dtManager.removeUAV(predictedLeaves(i));
                 end
-
             end
 
-            %--------------------------------------------------------------
-            % Statistics
-            %--------------------------------------------------------------
             obj.statistics.incrementLeave();
 
             if ~isempty(rekeyResult)
-
                 if ~isempty(rekeyResult.predictedLeaves)
-
                     obj.statistics.incrementPredictedLeaves( ...
                         numel(rekeyResult.predictedLeaves));
-
                     obj.statistics.recordRekey(true,rekeyResult);
-
                 else
                     obj.statistics.recordRekey(false,rekeyResult);
                 end
-
             end
-
         end
 
         function processFailure(obj,uavID,reason)
-
             decision = obj.makeFailureDecision(uavID,reason);
-
             if ~decision.approved
                 return;
             end
 
             uav = obj.swarm.findUAV(uavID);
-
             if isempty(uav)
                 return;
             end
 
-            %--------------------------------------------------------------
-            % Protocol owns requested and predicted UAV removal
-            %--------------------------------------------------------------
             rekeyResult = obj.protocol.failure(uavID);
-
             obj.dtManager.removeUAV(uavID);
 
             if ~isempty(rekeyResult)
-
                 predictedLeaves = rekeyResult.predictedLeaves;
-
                 for i = 1:numel(predictedLeaves)
                     obj.dtManager.removeUAV(predictedLeaves(i));
                 end
-
             end
 
-            %--------------------------------------------------------------
-            % Statistics
-            %--------------------------------------------------------------
             obj.statistics.incrementFailure();
 
             if ~isempty(rekeyResult)
-
                 if ~isempty(rekeyResult.predictedLeaves)
-
                     obj.statistics.incrementPredictedLeaves( ...
                         numel(rekeyResult.predictedLeaves));
-
                     obj.statistics.recordRekey(true,rekeyResult);
-
                 else
                     obj.statistics.recordRekey(false,rekeyResult);
                 end
-
             end
-
         end
 
         function result = makeAdmissionDecision(obj, candidateUAV)
-
             result.accepted = true;
             result.reason = "Accepted";
-
         end
 
         function decision = makeLeaveDecision(obj, uavID)
@@ -341,24 +275,21 @@ classdef Simulation < handle
 
             fprintf('\n');
             fprintf('========== Simulation Statistics ==========\n');
-
             fprintf('Join Events        : %d\n', stats.joinEvents);
             fprintf('Leave Events       : %d\n', stats.leaveEvents);
             fprintf('Failure Events     : %d\n', stats.failureEvents);
             fprintf('DT Disturbances    : %d\n', obj.dtDisturbanceCount);
-
             fprintf('Predicted Leaves   : %d\n', stats.predictedLeaves);
             fprintf('Rejected Joins     : %d\n', stats.rejectedJoins);
             fprintf('Local Rekeys       : %d\n', stats.localRekeys);
             fprintf('Batch Rekeys       : %d\n', stats.batchRekeys);
-            fprintf('Messages Sent     : %d\n', stats.totalMessages);
-            fprintf('Bytes Transmitted : %d\n', stats.totalBytes);
-            fprintf('Communication Cost: %.0f\n', stats.communicationCost);
-            fprintf('Encryptions       : %d\n', stats.totalEncryptions);
-            fprintf('Decryptions       : %d\n', stats.totalDecryptions);
-            fprintf('Hash Operations   : %d\n', stats.totalHashOperations);
-            fprintf('Random Numbers    : %d\n', stats.totalRandomNumbers);
-
+            fprintf('Messages Sent      : %d\n', stats.totalMessages);
+            fprintf('Bytes Transmitted  : %d\n', stats.totalBytes);
+            fprintf('Communication Cost : %.0f\n', stats.communicationCost);
+            fprintf('Encryptions        : %d\n', stats.totalEncryptions);
+            fprintf('Decryptions        : %d\n', stats.totalDecryptions);
+            fprintf('Hash Operations    : %d\n', stats.totalHashOperations);
+            fprintf('Random Numbers     : %d\n', stats.totalRandomNumbers);
             fprintf('===========================================\n');
         end
 
