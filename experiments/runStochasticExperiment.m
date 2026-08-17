@@ -3,14 +3,7 @@ function result = runStochasticExperiment(protocolName, swarmSize, runID, random
 %
 %   RESULT = RUNSTOCHASTICEXPERIMENT(PROTOCOLNAME,SWARMSIZE,RUNID,RANDOMSEED)
 %   executes the existing Simulation lifecycle using the configured
-%   Poisson event rates. This experiment is separate from the controlled
-%   one-event Join/Leave performance study.
-%
-%   The current stochastic model uses config.m values for:
-%       joinRate, leaveRate, failureRate, timeStep, simulationTime.
-%
-%   RESULT is a scalar struct containing event, rekey, communication, DT,
-%   and final-membership statistics for this independent run.
+%   Poisson event rates and optional Poisson DT disturbance process.
 
     if nargin < 2
         error('runStochasticExperiment:InvalidArguments', ...
@@ -71,6 +64,9 @@ function result = runStochasticExperiment(protocolName, swarmSize, runID, random
     result.joinRate = cfg.joinRate;
     result.leaveRate = cfg.leaveRate;
     result.failureRate = cfg.failureRate;
+    result.dtDisturbanceEnabled = cfg.dtDisturbanceEnabled;
+    result.dtDisturbanceRate = cfg.dtDisturbanceRate;
+    result.dtDisturbanceCount = sim.dtDisturbanceCount;
 
     result.joinEvents = stats.joinEvents;
     result.leaveEvents = stats.leaveEvents;
