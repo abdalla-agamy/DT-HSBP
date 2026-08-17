@@ -1,10 +1,9 @@
 function report = DTPredictionConsumptionTest(protocolName, swarmSize, randomSeed)
 %DTPREDICTIONCONSUMPTIONTEST Validate persistent DT prediction consumption.
 %
-% This test verifies that a DT prediction created by a physical
-% disturbance is persistent until the corresponding DTHSBP leave/failure
-% processing consumes it, and that the same prediction is not counted a
-% second time.
+% The test verifies that predictions are consumed once and that a second
+% processing attempt does not generate additional predicted leaves or batch
+% rekeys.
 
     if nargin < 1
         protocolName = "DTHSBP";
@@ -76,11 +75,14 @@ function report = DTPredictionConsumptionTest(protocolName, swarmSize, randomSee
     firstBatch = afterFirst.batchRekeys;
     firstPredictedLeaves = afterFirst.predictedLeaves;
 
+    batchBeforeSecond = firstBatch;
+    predictedBeforeSecond = firstPredictedLeaves;
+
     sim.processLeaveRequest(leavingID);
     afterSecond = sim.statistics.getStatistics();
 
-    secondBatch = afterSecond.batchRekeys;
-    secondPredictedLeaves = afterSecond.predictedLeaves;
+    secondBatch = afterSecond.batchRekeys - batchBeforeSecond;
+    secondPredictedLeaves = afterSecond.predictedLeaves - predictedBeforeSecond;
 
     report = struct();
     report.protocol = string(protocolName);
@@ -101,8 +103,8 @@ function report = DTPredictionConsumptionTest(protocolName, swarmSize, randomSee
     report.predictionsCreated = all(preConsume);
     report.predictionsConsumed = ~any(postConsume);
     report.singleBatchFirstProcessing = (firstBatch == 1);
-    report.noDuplicateBatchOnSecondProcessing = (secondBatch == firstBatch);
-    report.noDuplicatePredictions = (secondPredictedLeaves == firstPredictedLeaves);
+    report.noDuplicateBatchOnSecondProcessing = (secondBatch == 0);
+    report.noDuplicatePredictions = (secondPredictedLeaves == 0);
 
     fprintf('============================================\n');
     fprintf('DT Prediction Consumption Test\n');
@@ -115,8 +117,8 @@ function report = DTPredictionConsumptionTest(protocolName, swarmSize, randomSee
     fprintf('Predictions after leave  : %s\n', mat2str(postConsume));
     fprintf('First predicted leaves   : %d\n', firstPredictedLeaves);
     fprintf('First batch rekeys       : %d\n', firstBatch);
-    fprintf('Second predicted leaves  : %d\n', secondPredictedLeaves);
-    fprintf('Second batch rekeys      : %d\n', secondBatch);
+    fprintf('New predicted leaves on second processing: %d\n', secondPredictedLeaves);
+    fprintf('New batch rekeys on second processing    : %d\n', secondBatch);
 
     if ~(report.predictionsCreated && ...
             report.predictionsConsumed && ...
