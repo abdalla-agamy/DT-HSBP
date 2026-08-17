@@ -1,20 +1,14 @@
 %% STOCHASTICEXPERIMENT
 % Root-level executable driver for the Poisson stochastic experiment.
 %
-% Edit the USER OPTIONS section below, then run this file directly:
-%
+% Run directly:
 %     StochasticExperiment
 %
-% The script runs the stochastic study, prints mean +/- standard deviation
-% statistics, reports DT-HSBP performance gains relative to FlatSBP/HSBP,
-% and generates the stochastic figures.
-%
-% PARALLEL_EXECUTION = true requires the Parallel Computing Toolbox.
-% If enabled but the toolbox is unavailable, the script stops with a clear
-% error rather than silently falling back to serial execution.
+% Set PARALLEL_EXECUTION below to select serial or Parallel Computing
+% Toolbox execution.
 
 %% ========================= USER OPTIONS ================================
-PARALLEL_EXECUTION = false;     % false = normal, true = Parallel Toolbox
+PARALLEL_EXECUTION = true;      % false = serial, true = parallel
 
 PROTOCOLS   = ["FlatSBP","HSBP","DTHSBP"];
 SWARM_SIZES = [1000 2000 3000 4000 5000];
@@ -43,12 +37,9 @@ if PARALLEL_EXECUTION
 
     pool = gcp('nocreate');
     if isempty(pool)
-        pool = parpool('local'); %#ok<NASGU>
+        parpool('local');
     end
 
-    % The study runner is the canonical serial/paired experiment runner.
-    % Parallel execution is enabled through the study runner's parallel
-    % option when supported by the current repository implementation.
     results = runStochasticStudy( ...
         PROTOCOLS,SWARM_SIZES,REPETITIONS,BASE_SEED,'UseParallel',true);
 else
@@ -88,14 +79,13 @@ function printStochasticStatistics(results,protocols,swarmSizes)
     fprintf('============================================\n');
 
     fprintf('\n--- COMMUNICATION ---\n');
-    fprintf('%-8s %-6s %-18s %-18s %-18s\n', ...
+    fprintf('%-8s %-6s %-22s %-22s %-18s\n', ...
         'Protocol','N','Messages','Bytes','Rekeys');
 
     for p = 1:numel(protocols)
         for n = 1:numel(swarmSizes)
-            x = results(string({results.protocol}) == protocols(p) & ...
-                        [results.initialSwarmSize] == swarmSizes(n));
-            fprintf('%-8s %-6d %-18s %-18s %-18s\n', ...
+            x = selectGroup(results,protocols(p),swarmSizes(n));
+            fprintf('%-8s %-6d %-22s %-22s %-18s\n', ...
                 protocols(p),swarmSizes(n), ...
                 meanStdString([x.totalMessages]), ...
                 meanStdString([x.totalBytes]), ...
@@ -104,14 +94,13 @@ function printStochasticStatistics(results,protocols,swarmSizes)
     end
 
     fprintf('\n--- STOCHASTIC WORKLOAD ---\n');
-    fprintf('%-8s %-6s %-18s %-18s %-18s\n', ...
+    fprintf('%-8s %-6s %-22s %-22s %-22s\n', ...
         'Protocol','N','Joins','Leaves','Failures');
 
     for p = 1:numel(protocols)
         for n = 1:numel(swarmSizes)
-            x = results(string({results.protocol}) == protocols(p) & ...
-                        [results.initialSwarmSize] == swarmSizes(n));
-            fprintf('%-8s %-6d %-18s %-18s %-18s\n', ...
+            x = selectGroup(results,protocols(p),swarmSizes(n));
+            fprintf('%-8s %-6d %-22s %-22s %-22s\n', ...
                 protocols(p),swarmSizes(n), ...
                 meanStdString([x.joinEvents]), ...
                 meanStdString([x.leaveEvents]), ...
@@ -120,13 +109,12 @@ function printStochasticStatistics(results,protocols,swarmSizes)
     end
 
     fprintf('\n--- DT-HSBP ---\n');
-    fprintf('%-6s %-18s %-18s %-18s\n', ...
+    fprintf('%-6s %-22s %-22s %-22s\n', ...
         'N','Predicted leaves','Batch rekeys','Final active UAVs');
 
-    dt = protocols == "DTHSBP";
     for n = 1:numel(swarmSizes)
-        x = results(dt([results(dt).initialSwarmSize] == swarmSizes(n)));
-        fprintf('%-6d %-18s %-18s %-18s\n', ...
+        x = selectGroup(results,"DTHSBP",swarmSizes(n));
+        fprintf('%-6d %-22s %-22s %-22s\n', ...
             swarmSizes(n), ...
             meanStdString([x.predictedLeaves]), ...
             meanStdString([x.batchRekeys]), ...
@@ -142,25 +130,27 @@ function printPerformanceGains(results,swarmSizes)
     fprintf('%-6s %-18s %-18s %-18s %-18s\n', ...
         'N','Msg vs Flat','Bytes vs Flat','Msg vs HSBP','Bytes vs HSBP');
 
-    protocols = string({results.protocol});
     for n = 1:numel(swarmSizes)
-        flat = results(protocols == "FlatSBP" & [results.initialSwarmSize] == swarmSizes(n));
-        hsbp = results(protocols == "HSBP"    & [results.initialSwarmSize] == swarmSizes(n));
-        dt   = results(protocols == "DTHSBP"  & [results.initialSwarmSize] == swarmSizes(n));
-
-        flatMsg = [flat.totalMessages];
-        hsbpMsg = [hsbp.totalMessages];
-        dtMsg   = [dt.totalMessages];
-        flatBytes = [flat.totalBytes];
-        hsbpBytes = [hsbp.totalBytes];
-        dtBytes = [dt.totalBytes];
+        flat = selectGroup(results,"FlatSBP",swarmSizes(n));
+        hsbp = selectGroup(results,"HSBP",swarmSizes(n));
+        dt   = selectGroup(results,"DTHSBP",swarmSizes(n));
 
         fprintf('%-6d %-18s %-18s %-18s %-18s\n', ...
             swarmSizes(n), ...
-            gainString(flatMsg,dtMsg), ...
-            gainString(flatBytes,dtBytes), ...
-            gainString(hsbpMsg,dtMsg), ...
-            gainString(hsbpBytes,dtBytes));
+            gainString([flat.totalMessages],[dt.totalMessages]), ...
+            gainString([flat.totalBytes],[dt.totalBytes]), ...
+            gainString([hsbp.totalMessages],[dt.totalMessages]), ...
+            gainString([hsbp.totalBytes],[dt.totalBytes]));
+    end
+end
+
+function group = selectGroup(results,protocol,swarmSize)
+    protocolValues = string({results.protocol});
+    group = results(protocolValues == string(protocol) & ...
+                    [results.initialSwarmSize] == swarmSize);
+    if isempty(group)
+        error('StochasticExperiment:MissingGroup', ...
+            'Missing result group for %s at N=%d.',protocol,swarmSize);
     end
 end
 
