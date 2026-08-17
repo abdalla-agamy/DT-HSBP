@@ -1,13 +1,13 @@
 function report = ExperimentR30Analysis(joinResults, leaveResults)
-%EXPERIMENTR30ANALYSIS Analyze the final R=30 Join/Leave experiment data.
+%EXPERIMENTR30ANALYSIS Analyze the final Join/Leave experiment data.
 %
 % REPORT = EXPERIMENTR30ANALYSIS(JOINRESULTS, LEAVERESULTS) validates and
-% summarizes the official R=30 observations without modifying the raw data.
+% summarizes the official Join/Leave observations without modifying the raw data.
 %
 % Expected configuration:
 %   Protocols   : FlatSBP, HSBP, DTHSBP
 %   Swarm sizes : 1000, 2000, 3000, 4000, 5000
-%   Repetitions : 30
+%   Repetitions : 10
 %
 % The function reports descriptive statistics, communication savings, and
 % DT-HSBP predicted-leave consistency. It does not generate figures and it
@@ -25,7 +25,7 @@ function report = ExperimentR30Analysis(joinResults, leaveResults)
 
     protocols = ["FlatSBP", "HSBP", "DTHSBP"];
     swarmSizes = [1000 2000 3000 4000 5000];
-    repetitions = 30;
+    repetitions = 10;
 
     validateStudy(joinResults, "Join", protocols, swarmSizes, repetitions);
     validateStudy(leaveResults, "Leave", protocols, swarmSizes, repetitions);
@@ -192,7 +192,7 @@ end
 
 function printReport(report)
     fprintf('============================================\n');
-    fprintf('R=30 Statistical Analysis\n');
+    fprintf('R=10 Statistical Analysis\n');
     fprintf('============================================\n');
     fprintf('Join observations  : %d\n', report.joinObservationCount);
     fprintf('Join groups        : %d\n', report.joinGroupCount);
