@@ -40,7 +40,7 @@ function report = DTStochasticStressTest(protocolName, swarmSize, randomSeed)
     protocol = DTHSBP(swarm);
     sim = Simulation(cfg, protocol);
 
-    % Establish the initial DT prediction state.
+    % Establish the initial DT observation/prediction state at t=0.
     sim.updateDigitalTwins();
 
     targetCluster = 1;
@@ -48,15 +48,11 @@ function report = DTStochasticStressTest(protocolName, swarmSize, randomSeed)
     leaveTime = 41.0;
     perturbation = [10 0];
 
-    % Advance the stochastic simulation up to the disturbance time while
-    % preserving the configured Poisson event model.
+    % Advance the stochastic simulation to the disturbance instant.
     while sim.currentTime < disturbanceTime
         sim.step();
     end
 
-    % Select the affected UAVs from the population that actually exists at
-    % the disturbance time. This avoids assuming that the initial members
-    % survived the preceding stochastic workload.
     members = swarm.findCluster(targetCluster).getActiveUAVs();
 
     if numel(members) < 4
@@ -67,8 +63,8 @@ function report = DTStochasticStressTest(protocolName, swarmSize, randomSeed)
     disturbedIDs = [members(2).id, members(3).id];
     leavingID = members(4).id;
 
-    % Apply a deterministic physical disturbance to two UAVs in the target
-    % cluster so that the established DT prediction becomes stale.
+    % The DT prediction established at t=40 is a prediction for t=41.
+    % Apply the disturbance after that prediction has been established.
     for i = 1:numel(disturbedIDs)
         uav = swarm.findUAV(disturbedIDs(i));
         if ~isempty(uav)
@@ -76,11 +72,17 @@ function report = DTStochasticStressTest(protocolName, swarmSize, randomSeed)
         end
     end
 
-    % Observe the disturbance now. This deliberately leaves the resulting
-    % high stability scores in the DT agents until the explicit leave below.
-    % The next normal DT update is intentionally not performed before the
-    % leave request, otherwise the one-step disturbance would be absorbed
-    % into a new prediction and the score would return toward zero.
+    % Advance the physical swarm to t=41 before evaluating the DT residual.
+    % This keeps actual and predicted states at the same time index. Calling
+    % updateDigitalTwins() immediately at t=40 would compare the t=40 actual
+    % state against the already stored t=41 prediction and create a spurious
+    % one-step velocity residual for every UAV.
+    sim.swarm.step(cfg);
+    sim.currentTime = sim.currentTime + cfg.timeStep;
+
+    % Now the stored prediction is for t=41 and the actual state is t=41.
+    % Only the intentionally disturbed UAVs should acquire the large
+    % position residual.
     sim.updateDigitalTwins();
 
     disturbedScores = zeros(1, numel(disturbedIDs));
@@ -89,14 +91,6 @@ function report = DTStochasticStressTest(protocolName, swarmSize, randomSeed)
         if ~isempty(uav)
             disturbedScores(i) = uav.dt.stabilityScore;
         end
-    end
-
-    % Advance physical time by one second without refreshing the DTs. This
-    % preserves the observed disturbance scores until the leave decision at
-    % t=41 s.
-    while sim.currentTime < leaveTime
-        sim.swarm.step(cfg);
-        sim.currentTime = sim.currentTime + cfg.timeStep;
     end
 
     sim.processLeaveRequest(leavingID);
