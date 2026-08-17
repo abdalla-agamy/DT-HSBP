@@ -1,6 +1,5 @@
 classdef DTHSBP < HSBP
     methods
-
         function obj = DTHSBP(swarm)
             obj@HSBP(swarm);
         end
@@ -105,8 +104,8 @@ classdef DTHSBP < HSBP
                 return;
             end
 
-            currentTime = obj.cfg.currentTime;
             members = cluster.getActiveUAVs();
+            currentTime = obj.getCurrentTime(members);
 
             for i = 1:numel(members)
                 candidate = members(i);
@@ -118,6 +117,25 @@ classdef DTHSBP < HSBP
                     predictedLeaves(end+1) = candidate.id;
                     candidate.dt.consumePrediction();
                 end
+            end
+        end
+
+        function currentTime = getCurrentTime(obj, members)
+            currentTime = 0;
+            if isempty(members)
+                return;
+            end
+
+            if isfield(obj.cfg,'currentTime')
+                currentTime = obj.cfg.currentTime;
+                return;
+            end
+
+            % Fallback for standalone controlled tests that call the
+            % protocol directly without constructing Simulation.cfg time.
+            candidate = members(1);
+            if isfield(candidate.dt.cfg,'currentTime')
+                currentTime = candidate.dt.cfg.currentTime;
             end
         end
     end
