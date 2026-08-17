@@ -25,8 +25,8 @@ classdef EventFactory < handle
 
                 uavID = obj.swarm.allocateUAVID();
 
-                % Temporary cluster selection
-                clusterID = 1;
+                % Randomly distribute stochastic joins across clusters.
+                clusterID = randi(numel(obj.swarm.clusters));
 
                 events{end+1} = JoinEvent( ...
                     currentTime, ...
