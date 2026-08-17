@@ -61,6 +61,20 @@ cfg.leaveRate = 0.3;    % λL (leaves/second)
 cfg.failureRate = 0.1;    % λF (failures/second)
 
 %% ===============================
+% DT Disturbance Model
+% ================================
+% Independent physical disturbance process. Disabled by default so the
+% normal Poisson Join/Leave/Failure baseline remains unchanged.
+% When enabled, each simulation step samples
+% N_D ~ Poisson(dtDisturbanceRate * timeStep).
+cfg.dtDisturbanceEnabled = false;
+cfg.dtDisturbanceRate = 0.05;       % disturbances/second
+cfg.dtDisturbanceUAVCount = 2;      % affected UAVs per disturbance
+cfg.dtDisturbancePositionStep = [10 0];
+cfg.dtDisturbanceVelocityStep = [0 0];
+cfg.dtDisturbanceEnergyDrop = 0;
+
+%% ===============================
 % Residual Weights
 % ===============================
 
