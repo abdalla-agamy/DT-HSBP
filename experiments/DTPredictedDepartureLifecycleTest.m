@@ -72,7 +72,7 @@ function report = DTPredictedDepartureLifecycleTest(protocolName, swarmSize, ran
 
     initialActive = swarm.activeUAVs();
 
-    % Normal Simulation.step() must create the predictions and schedule the
+    % Normal Simulation.step() creates the predictions and schedules the
     % corresponding DTPredictedDepartureEvent objects for t=2.
     sim.step();
 
@@ -87,10 +87,11 @@ function report = DTPredictedDepartureLifecycleTest(protocolName, swarmSize, ran
 
     queuedEvents = sim.eventQueue.count();
 
-    % The next normal Simulation.step() starts at t=1, so the events with
-    % departure time t=2 are not executed yet. It advances to t=2, where the
-    % following step executes them at its beginning. Therefore use one more
-    % step to cross the event boundary and validate actual materialization.
+    % Simulation.step() processes due events at the BEGINNING of each step.
+    % The prediction events are scheduled for t=2, so the step from t=1 to
+    % t=2 only advances the clock. The following step executes the events at
+    % t=2 and then completes the normal physical/DT update.
+    sim.step();
     sim.step();
 
     activeAfterExecution = swarm.activeUAVs();
