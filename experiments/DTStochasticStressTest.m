@@ -34,6 +34,13 @@ function report = DTStochasticStressTest(protocolName, swarmSize, randomSeed)
 
     cfg.clusterSize = cfg.numUAVs / cfg.numClusters;
     cfg.randomSeed = randomSeed;
+
+    % This test validates deterministic DT prediction consumption and
+    % cluster-local batch leave behavior. Automatic stochastic materializa-
+    % tion of DT predictions must be disabled so unrelated predictions
+    % created during the warm-up cannot contaminate the controlled result.
+    cfg.dtPredictedDepartureEnabled = false;
+
     rng(randomSeed);
 
     swarm = Swarm(cfg);
