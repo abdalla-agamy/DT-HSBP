@@ -75,7 +75,16 @@ cfg.dtDisturbanceVelocityStep = [0 0];
 cfg.dtDisturbanceEnergyDrop = 0;
 
 cfg.dtPredictedDepartureEnabled = true;
-cfg.dtPredictedDepartureProbability = 1.0;
+
+% DT stochastic departure realization model:
+%   λ_DT(S) = λ_L * exp(S/thetaLeave - 1)
+%   P_realize = 1 - exp(-λ_DT(S) * predictionHorizon)
+%
+% The model anchors the DT realization hazard to the configured ordinary
+% leave hazard at the leave threshold. Instability above/below the threshold
+% increases/decreases the conditional realization hazard exponentially.
+% No independent probability constant is introduced.
+cfg.dtDepartureHazardModel = "threshold_anchored_exponential";
 
 %% ===============================
 % Residual Weights
