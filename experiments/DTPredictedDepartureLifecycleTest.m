@@ -87,18 +87,17 @@ function report = DTPredictedDepartureLifecycleTest(protocolName, swarmSize, ran
 
     queuedEvents = sim.eventQueue.count();
 
-    % Simulation.step() processes due events at the BEGINNING of each step.
-    % The prediction events are scheduled for t=2, so the step from t=1 to
-    % t=2 only advances the clock. The following step executes the events at
-    % t=2 and then completes the normal physical/DT update.
+    % Simulation.step() processes due events at the beginning of each step.
+    % Events scheduled for t=2 are therefore executed by the step whose
+    % starting time is t=2. The first such step also performs the normal
+    % physical/DT update afterward, so the validation ends immediately after
+    % that step.
     sim.step();
-    sim.step();
+    executionTime = sim.currentTime;
 
     activeAfterExecution = swarm.activeUAVs();
     statsAfterExecution = sim.statistics.getStatistics();
 
-    % No new events should remain from the two controlled predictions after
-    % their common departure time has been processed.
     queuedAfterExecution = sim.eventQueue.count();
 
     report = struct();
@@ -109,6 +108,8 @@ function report = DTPredictedDepartureLifecycleTest(protocolName, swarmSize, ran
     report.predictedUAVs = predictedIDs;
     report.perturbation = perturbation;
     report.predictionTime = predictionTime;
+    report.scheduledDepartureTime = predictionTime + cfg.predictionHorizon;
+    report.executionTime = executionTime;
     report.initialActiveUAVs = initialActive;
     report.predictionsCreated = predictionsCreated;
     report.queuedPredictedDepartureEvents = queuedEvents;
@@ -122,6 +123,8 @@ function report = DTPredictedDepartureLifecycleTest(protocolName, swarmSize, ran
 
     report.predictionsCreatedCorrectly = all(predictionsCreated);
     report.twoDepartureEventsScheduled = (queuedEvents == numel(predictedIDs));
+    report.departureExecutedAtExpectedTime = ...
+        (executionTime == predictionTime + cfg.predictionHorizon);
     report.twoUAVsDeparted = ...
         (activeAfterExecution == initialActive - numel(predictedIDs));
     report.singleBatchRekey = (statsAfterExecution.batchRekeys == 1);
@@ -137,6 +140,8 @@ function report = DTPredictedDepartureLifecycleTest(protocolName, swarmSize, ran
     fprintf('Initial active UAVs            : %d\n', initialActive);
     fprintf('Predicted UAVs                 : %s\n', mat2str(predictedIDs));
     fprintf('Prediction creation time      : %.1f s\n', predictionTime);
+    fprintf('Scheduled departure time      : %.1f s\n', report.scheduledDepartureTime);
+    fprintf('Execution time                : %.1f s\n', executionTime);
     fprintf('Predictions created           : %s\n', mat2str(predictionsCreated));
     fprintf('Departure events scheduled    : %d\n', queuedEvents);
     fprintf('Active UAVs after execution   : %d\n', activeAfterExecution);
@@ -150,6 +155,7 @@ function report = DTPredictedDepartureLifecycleTest(protocolName, swarmSize, ran
 
     if ~(report.predictionsCreatedCorrectly && ...
             report.twoDepartureEventsScheduled && ...
+            report.departureExecutedAtExpectedTime && ...
             report.twoUAVsDeparted && ...
             report.singleBatchRekey && ...
             report.oneCollateralPredictionConsumed && ...
