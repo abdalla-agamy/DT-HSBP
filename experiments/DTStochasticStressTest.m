@@ -2,7 +2,7 @@ function report = DTStochasticStressTest(protocolName, swarmSize, randomSeed)
 %DTSTOCHASTICSTRESSTEST Validate DT-driven predicted leaves inside Simulation.
 %
 % This is a mechanism-validation experiment, not part of the normal
-% Poisson stochastic benchmark. It starts a stochastic simulation,
+% Poisson stochastic benchmark. It starts a controlled simulation,
 % introduces a deterministic physical disturbance at a chosen time, then
 % verifies that DT instability can propagate into a predicted batch leave
 % and one cluster rekey.
@@ -36,9 +36,14 @@ function report = DTStochasticStressTest(protocolName, swarmSize, randomSeed)
     cfg.randomSeed = randomSeed;
 
     % This test validates deterministic DT prediction consumption and
-    % cluster-local batch leave behavior. Automatic stochastic materializa-
-    % tion of DT predictions must be disabled so unrelated predictions
-    % created during the warm-up cannot contaminate the controlled result.
+    % cluster-local batch leave behavior. The warm-up must not create
+    % unrelated DT predictions through stochastic membership events or
+    % physical disturbances. Those processes are exercised separately by
+    % the stochastic benchmark.
+    cfg.joinRate = 0;
+    cfg.leaveRate = 0;
+    cfg.failureRate = 0;
+    cfg.dtDisturbanceEnabled = false;
     cfg.dtPredictedDepartureEnabled = false;
 
     rng(randomSeed);
@@ -55,7 +60,7 @@ function report = DTStochasticStressTest(protocolName, swarmSize, randomSeed)
     leaveTime = 41.0;
     perturbation = [10 0];
 
-    % Advance the stochastic simulation to the disturbance instant.
+    % Advance the controlled simulation to the disturbance instant.
     while sim.currentTime < disturbanceTime
         sim.step();
     end
@@ -86,6 +91,7 @@ function report = DTStochasticStressTest(protocolName, swarmSize, randomSeed)
     % one-step velocity residual for every UAV.
     sim.swarm.step(cfg);
     sim.currentTime = sim.currentTime + cfg.timeStep;
+    sim.cfg.currentTime = sim.currentTime;
 
     % Now the stored prediction is for t=41 and the actual state is t=41.
     % Only the intentionally disturbed UAVs should acquire the large
@@ -125,7 +131,7 @@ function report = DTStochasticStressTest(protocolName, swarmSize, randomSeed)
 
     report.thresholdCrossed = all(disturbedScores > cfg.thetaLeave);
     report.singleBatchRekey = (stats.batchRekeys == 1);
-    report.predictionValidated = (stats.predictedLeaves >= numel(disturbedIDs));
+    report.predictionValidated = (stats.predictedLeaves == numel(disturbedIDs));
 
     fprintf('============================================\n');
     fprintf('DT Stochastic Stress Test\n');
