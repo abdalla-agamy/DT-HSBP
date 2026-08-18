@@ -356,6 +356,11 @@ end
         end
 
         function updateDigitalTwins(obj)
+            activeUAVs = obj.swarm.getActiveUAVs();
+            for i = 1:numel(activeUAVs)
+                activeUAVs(i).dt.cfg.currentTime = obj.currentTime;
+            end
+
             obj.dtManager.update();
         end
 
