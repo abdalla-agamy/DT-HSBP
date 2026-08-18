@@ -4,8 +4,8 @@ function report = DTRealizationStatisticsTest(protocolName, swarmSize, randomSee
 % Run multiple controlled one-second DT prediction experiments with no
 % exogenous membership or disturbance events. The physical disturbance is
 % applied directly to the same two UAVs in each run, producing two DT
-% predictions at the leave threshold. The model then samples the stochastic
-% realization probability through Simulation.schedulePredictedDepartures().
+% predictions exactly at the leave threshold. The model then samples the
+% stochastic realization probability through Simulation.schedulePredictedDepartures().
 %
 % The empirical realization ratio is compared with the analytical
 % threshold probability from the configured DT hazard model. This is a
@@ -42,13 +42,14 @@ function report = DTRealizationStatisticsTest(protocolName, swarmSize, randomSee
 
     baseCfg.clusterSize = baseCfg.numUAVs / baseCfg.numClusters;
     baseCfg.joinRate = 0;
-    baseCfg.leaveRate = 0;
     baseCfg.failureRate = 0;
     baseCfg.dtDisturbanceEnabled = false;
     baseCfg.dtPredictedDepartureEnabled = true;
 
+    % Preserve the configured ordinary Leave hazard. It is the analytical
+    % anchor of the DT stochastic realization model.
     targetCluster = 1;
-    perturbation = [10 0];
+    perturbation = [baseCfg.thetaLeave 0];
     analyticalProbability = 1 - exp( ...
         -baseCfg.leaveRate * baseCfg.predictionHorizon);
 
