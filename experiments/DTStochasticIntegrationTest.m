@@ -54,7 +54,15 @@ function report = DTStochasticIntegrationTest(protocolName, swarmSize, randomSee
 
     targetCluster = 1;
     targetMemberOffset = [2 3];
-    perturbation = [10 0];
+
+    % StabilityModel.shouldLeave() uses a strict comparison:
+    %     score > thetaLeave
+    % Therefore the controlled disturbance must be slightly above the
+    % threshold. Keep the margin small so the integration test exercises
+    % the same hazard region validated by DTRealizationStatisticsTest.
+    thresholdMargin = 1e-3;
+    controlledScore = baseCfg.thetaLeave + thresholdMargin;
+    perturbation = [controlledScore 0];
 
     for runIndex = 1:numRuns
         cfg = baseCfg;
@@ -145,6 +153,8 @@ function report = DTStochasticIntegrationTest(protocolName, swarmSize, randomSee
     report.totalLeaveEvents = totalLeaveEvents;
     report.totalActiveDepartures = totalActiveDepartures;
     report.meanDTStabilityScore = mean(scoreSamples);
+    report.controlledScore = controlledScore;
+    report.thresholdMargin = thresholdMargin;
     report.predictionsPerRunInvariant = (totalCreated == 2*numRuns);
     report.accountingInvariant = ...
         (totalUnrealized == totalCreated - totalRealized);
@@ -158,6 +168,7 @@ function report = DTStochasticIntegrationTest(protocolName, swarmSize, randomSee
     fprintf('============================================\n');
     fprintf('Protocol                    : %s\n', report.protocol);
     fprintf('Runs                        : %d\n', numRuns);
+    fprintf('Controlled DT score        : %.12f\n', controlledScore);
     fprintf('Predictions created        : %d\n', totalCreated);
     fprintf('Predictions realized       : %d\n', totalRealized);
     fprintf('Predictions unrealized     : %d\n', totalUnrealized);
