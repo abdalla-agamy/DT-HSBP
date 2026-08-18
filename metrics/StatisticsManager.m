@@ -15,6 +15,8 @@ classdef StatisticsManager < handle
         % DT
         %-------------------------------
         predictedLeaves = 0
+        dtPredictionsCreated = 0
+        dtPredictionsRealized = 0
         rejectedJoins = 0
 
         %-------------------------------
@@ -47,120 +49,99 @@ classdef StatisticsManager < handle
         end
 
         function incrementJoin(obj)
-
             obj.joinEvents = obj.joinEvents + 1;
-
         end
 
         function incrementLeave(obj)
-
             obj.leaveEvents = obj.leaveEvents + 1;
-
         end
 
         function incrementFailure(obj)
-
             obj.failureEvents = obj.failureEvents + 1;
-
         end
 
         function incrementPredictedLeaves(obj,n)
-
             if nargin < 2
                 n = 1;
             end
+            obj.predictedLeaves = obj.predictedLeaves + n;
+        end
 
-            obj.predictedLeaves = ...
-                obj.predictedLeaves + n;
+        function incrementDTPredictionsCreated(obj,n)
+            if nargin < 2
+                n = 1;
+            end
+            obj.dtPredictionsCreated = obj.dtPredictionsCreated + n;
+        end
 
+        function incrementDTPredictionsRealized(obj,n)
+            if nargin < 2
+                n = 1;
+            end
+            obj.dtPredictionsRealized = obj.dtPredictionsRealized + n;
         end
 
         function incrementRejectedJoin(obj)
-
-            obj.rejectedJoins = ...
-                obj.rejectedJoins + 1;
-
+            obj.rejectedJoins = obj.rejectedJoins + 1;
         end
 
         function recordRekey(obj, isBatch, result)
+            obj.totalMessages = obj.totalMessages + result.messagesSent;
+            obj.totalEncryptions = obj.totalEncryptions + result.encryptions;
+            obj.totalKeysGenerated = obj.totalKeysGenerated + result.keysGenerated;
 
-            %             obj.localRekeys = ...
-            %                 obj.localRekeys + 1;
-            %             if isBatch
-            %                 obj.batchRekeys = ...
-            %                     obj.batchRekeys + 1;
-            %             end
-            obj.totalMessages = ...
-                obj.totalMessages + result.messagesSent;
+            messageBytes = result.messagesSent * obj.cfg.messageSize;
+            obj.totalBytes = obj.totalBytes + messageBytes;
+            obj.communicationCost = obj.totalBytes;
 
-            obj.totalEncryptions = ...
-                obj.totalEncryptions + result.encryptions;
-
-            obj.totalKeysGenerated = ...
-                obj.totalKeysGenerated + result.keysGenerated;
-
-            messageBytes = ...
-                result.messagesSent * obj.cfg.messageSize;
-
-            obj.totalBytes = ...
-                obj.totalBytes + messageBytes;
-
-            obj.communicationCost = ...
-                obj.totalBytes;
-
-            obj.totalDecryptions = ...
-                obj.totalDecryptions + result.decryptions;
-
-            obj.totalHashOperations = ...
-                obj.totalHashOperations + result.hashOperations;
-
-            obj.totalRandomNumbers = ...
-                obj.totalRandomNumbers + result.randomNumbers;
+            obj.totalDecryptions = obj.totalDecryptions + result.decryptions;
+            obj.totalHashOperations = obj.totalHashOperations + result.hashOperations;
+            obj.totalRandomNumbers = obj.totalRandomNumbers + result.randomNumbers;
 
             if isBatch
                 obj.batchRekeys = obj.batchRekeys + 1;
             else
                 obj.localRekeys = obj.localRekeys + 1;
             end
-
         end
+
         function n = getJoinEvents(obj)
-
             n = obj.joinEvents;
-
         end
+
         function n = getLeaveEvents(obj)
-
             n = obj.leaveEvents;
-
         end
+
         function n = getFailureEvents(obj)
-
             n = obj.failureEvents;
-
         end
+
         function n = getPredictedLeaves(obj)
-
             n = obj.predictedLeaves;
-
         end
+
+        function n = getDTPredictionsCreated(obj)
+            n = obj.dtPredictionsCreated;
+        end
+
+        function n = getDTPredictionsRealized(obj)
+            n = obj.dtPredictionsRealized;
+        end
+
         function n = getRejectedJoins(obj)
-
             n = obj.rejectedJoins;
-
         end
+
         function n = getLocalRekeys(obj)
-
             n = obj.localRekeys;
-
         end
+
         function n = getBatchRekeys(obj)
-
             n = obj.batchRekeys;
-
         end
-        function stats = getStatistics(obj)
 
+        function stats = getStatistics(obj)
             stats.joinEvents = obj.joinEvents;
             stats.leaveEvents = obj.leaveEvents;
             stats.failureEvents = obj.failureEvents;
@@ -169,6 +150,17 @@ classdef StatisticsManager < handle
             stats.batchRekeys = obj.batchRekeys;
 
             stats.predictedLeaves = obj.predictedLeaves;
+            stats.dtPredictionsCreated = obj.dtPredictionsCreated;
+            stats.dtPredictionsRealized = obj.dtPredictionsRealized;
+            stats.dtPredictionsUnrealized = ...
+                max(0, obj.dtPredictionsCreated - obj.dtPredictionsRealized);
+            if obj.dtPredictionsCreated > 0
+                stats.dtRealizationRatio = ...
+                    obj.dtPredictionsRealized / obj.dtPredictionsCreated;
+            else
+                stats.dtRealizationRatio = NaN;
+            end
+
             stats.rejectedJoins = obj.rejectedJoins;
 
             stats.totalMessages = obj.totalMessages;
@@ -181,17 +173,16 @@ classdef StatisticsManager < handle
             stats.totalDecryptions = obj.totalDecryptions;
             stats.totalHashOperations = obj.totalHashOperations;
             stats.totalRandomNumbers = obj.totalRandomNumbers;
-
         end
 
         function reset(obj)
-            %RESET Clear all collected statistics.
-
             obj.joinEvents = 0;
             obj.leaveEvents = 0;
             obj.failureEvents = 0;
 
             obj.predictedLeaves = 0;
+            obj.dtPredictionsCreated = 0;
+            obj.dtPredictionsRealized = 0;
             obj.rejectedJoins = 0;
 
             obj.localRekeys = 0;
@@ -207,10 +198,7 @@ classdef StatisticsManager < handle
             obj.totalDecryptions = 0;
             obj.totalHashOperations = 0;
             obj.totalRandomNumbers = 0;
-
         end
-
-
 
     end
 
