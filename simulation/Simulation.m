@@ -93,7 +93,7 @@ classdef Simulation < handle
             %--------------------------------------------------------------
             % 7. Materialize persistent DT predicted departures
             %--------------------------------------------------------------
-            obj.schedulePredictedDepartures()
+            obj.schedulePredictedDepartures();
 
         end
 
@@ -175,15 +175,11 @@ classdef Simulation < handle
 
         function schedulePredictedDepartures(obj)
 
-            % This mechanism is relevant only to DTHSBP.
             if ~isa(obj.protocol,"DTHSBP")
                 return;
             end
 
-            % Keep the existing stochastic benchmark unchanged unless the
-            % DT-predicted departure mechanism is explicitly enabled.
             enabled = false;
-
             if isfield(obj.cfg,'dtPredictedDepartureEnabled')
                 enabled = logical(obj.cfg.dtPredictedDepartureEnabled);
             end
@@ -194,20 +190,15 @@ classdef Simulation < handle
 
             currentTime = obj.currentTime;
             departureTime = currentTime + obj.cfg.predictionHorizon;
-
             activeUAVs = obj.swarm.getActiveUAVs();
 
             for i = 1:numel(activeUAVs)
-
                 uav = activeUAVs(i);
 
                 if isempty(uav.dt)
                     continue;
                 end
 
-                % Only schedule a prediction that was CREATED at the current
-                % simulation time. This prevents the same persistent prediction
-                % from being scheduled repeatedly on subsequent steps.
                 if ~uav.dt.predictedLeave
                     continue;
                 end
@@ -216,16 +207,22 @@ classdef Simulation < handle
                     continue;
                 end
 
+                % Only materialize predictions created at this simulation
+                % time. This prevents persistent predictions from being
+                % counted repeatedly on later steps.
                 if abs(uav.dt.predictionTime - currentTime) > 1e-12
                     continue;
                 end
 
                 probability = obj.computeDTDepartureProbability( ...
-                    uav.dt.stabilityScore, obj.cfg.predictionHorizon);
+                    uav.dt.stabilityScore, ...
+                    obj.cfg.predictionHorizon);
 
                 if rand() > probability
                     continue;
                 end
+
+                obj.statistics.incrementDTPredictionsRealized();
 
                 obj.eventQueue.schedule( ...
                     DTPredictedDepartureEvent( ...
@@ -237,23 +234,28 @@ classdef Simulation < handle
         end
 
         function probability = computeDTDepartureProbability(obj, stabilityScore, horizon)
-            % Conditional probability that a persistent DT prediction is
-            % realized as an actual departure during the prediction horizon.
-            %
-            % The hazard is anchored to the ordinary Leave Poisson rate at
-            % thetaLeave and changes exponentially with normalized DT
-            % instability:
-            %
-            %   lambda_DT(S) = lambda_L * exp(S/thetaLeave - 1)
-            %   P = 1 - exp(-lambda_DT(S) * horizon)
+            validateattributes(stabilityScore, ...
+                {'numeric'}, {'scalar','real','finite','nonnegative'});
+            validateattributes(horizon, ...
+                {'numeric'}, {'scalar','real','finite','nonnegative'});
 
-            leaveRate = max(0,obj.cfg.leaveRate);
-            threshold = max(eps,obj.cfg.thetaLeave);
-            horizon = max(0,horizon);
-            score = max(0,stabilityScore);
+            if ~isfield(obj.cfg,'dtDepartureHazardModel') || ...
+                    string(obj.cfg.dtDepartureHazardModel) ~= ...
+                    "threshold_anchored_exponential"
+                error('Simulation:UnsupportedDTHazardModel', ...
+                    'Unsupported DT departure hazard model.');
+            end
 
-            hazard = leaveRate * exp(score/threshold - 1);
-            probability = 1 - exp(-hazard*horizon);
+            theta = obj.cfg.thetaLeave;
+            leaveRate = obj.cfg.leaveRate;
+
+            if stabilityScore <= 0 || theta <= 0 || leaveRate <= 0 || horizon <= 0
+                probability = 0;
+                return;
+            end
+
+            hazard = leaveRate * exp(stabilityScore / theta - 1);
+            probability = 1 - exp(-hazard * horizon);
             probability = max(0,min(1,probability));
         end
 
@@ -376,7 +378,18 @@ classdef Simulation < handle
                 activeUAVs(i).dt.cfg.currentTime = obj.currentTime;
             end
 
+            previousPredictions = false(1,numel(activeUAVs));
+            for i = 1:numel(activeUAVs)
+                previousPredictions(i) = activeUAVs(i).dt.predictedLeave;
+            end
+
             obj.dtManager.update();
+
+            for i = 1:numel(activeUAVs)
+                if ~previousPredictions(i) && activeUAVs(i).dt.predictedLeave
+                    obj.statistics.incrementDTPredictionsCreated();
+                end
+            end
         end
 
         function printStatistics(obj)
@@ -388,6 +401,10 @@ classdef Simulation < handle
             fprintf('Leave Events       : %d\n', stats.leaveEvents);
             fprintf('Failure Events     : %d\n', stats.failureEvents);
             fprintf('DT Disturbances    : %d\n', obj.dtDisturbanceCount);
+            fprintf('DT Predictions     : %d\n', stats.dtPredictionsCreated);
+            fprintf('DT Realized        : %d\n', stats.dtPredictionsRealized);
+            fprintf('DT Unrealized      : %d\n', stats.dtPredictionsUnrealized);
+            fprintf('DT Realization     : %.6f\n', stats.dtRealizationRatio);
             fprintf('Predicted Leaves   : %d\n', stats.predictedLeaves);
             fprintf('Rejected Joins     : %d\n', stats.rejectedJoins);
             fprintf('Local Rekeys       : %d\n', stats.localRekeys);
