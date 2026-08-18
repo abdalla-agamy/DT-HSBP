@@ -4,12 +4,12 @@ function report = DTRealizationStatisticsTest(protocolName, swarmSize, randomSee
 % Run multiple controlled one-second DT prediction experiments with no
 % exogenous membership or disturbance events. The physical disturbance is
 % applied directly to the same two UAVs in each run, producing two DT
-% predictions exactly at the leave threshold. The model then samples the
+% predictions just above the leave threshold. The model then samples the
 % stochastic realization probability through Simulation.schedulePredictedDepartures().
 %
 % The empirical realization ratio is compared with the analytical
-% threshold probability from the configured DT hazard model. This is a
-% statistical diagnostic, not a production benchmark.
+% probability for the controlled DT score. This is a statistical
+% diagnostic, not a production benchmark.
 
     if nargin < 1
         protocolName = "DTHSBP";
@@ -46,18 +46,24 @@ function report = DTRealizationStatisticsTest(protocolName, swarmSize, randomSee
     baseCfg.dtDisturbanceEnabled = false;
     baseCfg.dtPredictedDepartureEnabled = true;
 
-    % Preserve the configured ordinary Leave hazard. It is the analytical
-    % anchor of the DT stochastic realization model.
+    % StabilityModel.shouldLeave() uses a strict inequality (D > thetaLeave).
+    % Therefore the controlled residual must be slightly above the threshold
+    % rather than exactly equal to it. The analytical probability is computed
+    % for that same controlled score.
     targetCluster = 1;
-    perturbation = [baseCfg.thetaLeave 0];
+    thresholdMargin = 1e-3;
+    controlledScore = baseCfg.thetaLeave + thresholdMargin;
+    perturbation = [controlledScore 0];
+
     analyticalProbability = 1 - exp( ...
-        -baseCfg.leaveRate * baseCfg.predictionHorizon);
+        -(baseCfg.leaveRate * ...
+          exp(controlledScore / baseCfg.thetaLeave - 1)) * ...
+          baseCfg.predictionHorizon);
 
     totalCreated = 0;
     totalRealized = 0;
     totalUnrealized = 0;
     totalBatchRekeys = 0;
-    runRatios = NaN(1, numRuns);
 
     for runIndex = 1:numRuns
         cfg = baseCfg;
@@ -93,10 +99,6 @@ function report = DTRealizationStatisticsTest(protocolName, swarmSize, randomSee
         totalRealized = totalRealized + realized;
         totalUnrealized = totalUnrealized + stats.dtPredictionsUnrealized;
         totalBatchRekeys = totalBatchRekeys + stats.batchRekeys;
-
-        if created > 0
-            runRatios(runIndex) = realized / created;
-        end
     end
 
     if totalCreated > 0
@@ -105,9 +107,8 @@ function report = DTRealizationStatisticsTest(protocolName, swarmSize, randomSee
         empiricalRatio = NaN;
     end
 
-    % With 2*numRuns independent Bernoulli trials, use a conservative
-    % absolute tolerance of five standard deviations around the analytical
-    % probability for this diagnostic.
+    % With two controlled predictions per run, use a conservative absolute
+    % tolerance of five standard deviations around the analytical probability.
     trialCount = totalCreated;
     standardError = sqrt( ...
         analyticalProbability * (1 - analyticalProbability) / max(1, trialCount));
@@ -121,6 +122,8 @@ function report = DTRealizationStatisticsTest(protocolName, swarmSize, randomSee
     report.predictionHorizon = baseCfg.predictionHorizon;
     report.leaveRate = baseCfg.leaveRate;
     report.thetaLeave = baseCfg.thetaLeave;
+    report.controlledScore = controlledScore;
+    report.thresholdMargin = thresholdMargin;
     report.analyticalProbability = analyticalProbability;
     report.totalPredictionsCreated = totalCreated;
     report.totalPredictionsRealized = totalRealized;
@@ -139,6 +142,7 @@ function report = DTRealizationStatisticsTest(protocolName, swarmSize, randomSee
     fprintf('============================================\n');
     fprintf('Protocol                    : %s\n', report.protocol);
     fprintf('Runs                        : %d\n', numRuns);
+    fprintf('Controlled DT score        : %.6f\n', controlledScore);
     fprintf('Predictions created        : %d\n', totalCreated);
     fprintf('Predictions realized       : %d\n', totalRealized);
     fprintf('Predictions unrealized     : %d\n', totalUnrealized);
