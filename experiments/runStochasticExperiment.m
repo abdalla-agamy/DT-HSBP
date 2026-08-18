@@ -68,6 +68,12 @@ function result = runStochasticExperiment(protocolName, swarmSize, runID, random
     result.dtDisturbanceRate = cfg.dtDisturbanceRate;
     result.dtDisturbanceCount = sim.dtDisturbanceCount;
 
+    result.dtDepartureHazardModel = cfg.dtDepartureHazardModel;
+    result.dtPredictionsCreated = stats.dtPredictionsCreated;
+    result.dtPredictionsRealized = stats.dtPredictionsRealized;
+    result.dtPredictionsUnrealized = stats.dtPredictionsUnrealized;
+    result.dtRealizationRatio = stats.dtRealizationRatio;
+
     result.joinEvents = stats.joinEvents;
     result.leaveEvents = stats.leaveEvents;
     result.failureEvents = stats.failureEvents;
