@@ -86,18 +86,26 @@ function report = DTPredictedDepartureLifecycleTest(protocolName, swarmSize, ran
     end
 
     queuedEvents = sim.eventQueue.count();
+    scheduledDepartureTime = predictionTime + cfg.predictionHorizon;
 
-    % Simulation.step() processes due events at the beginning of each step.
-    % Events scheduled for t=2 are therefore executed by the step whose
-    % starting time is t=2. The first such step also performs the normal
-    % physical/DT update afterward, so the validation ends immediately after
-    % that step.
+    % Simulation.step() executes due events at its beginning. The first
+    % step below advances from t=1 to t=2, establishing the exact execution
+    % boundary without executing the t=2 events yet.
     sim.step();
     executionTime = sim.currentTime;
 
+    if executionTime ~= scheduledDepartureTime
+        error('DTPredictedDepartureLifecycleTest:Timing', ...
+            'Simulation did not reach the scheduled departure time.');
+    end
+
+    % The next step starts at t=2, so the two due predicted-departure events
+    % are executed before the physical/DT update. Capture the state after
+    % that execution step.
+    sim.step();
+
     activeAfterExecution = swarm.activeUAVs();
     statsAfterExecution = sim.statistics.getStatistics();
-
     queuedAfterExecution = sim.eventQueue.count();
 
     report = struct();
@@ -108,7 +116,7 @@ function report = DTPredictedDepartureLifecycleTest(protocolName, swarmSize, ran
     report.predictedUAVs = predictedIDs;
     report.perturbation = perturbation;
     report.predictionTime = predictionTime;
-    report.scheduledDepartureTime = predictionTime + cfg.predictionHorizon;
+    report.scheduledDepartureTime = scheduledDepartureTime;
     report.executionTime = executionTime;
     report.initialActiveUAVs = initialActive;
     report.predictionsCreated = predictionsCreated;
@@ -123,8 +131,8 @@ function report = DTPredictedDepartureLifecycleTest(protocolName, swarmSize, ran
 
     report.predictionsCreatedCorrectly = all(predictionsCreated);
     report.twoDepartureEventsScheduled = (queuedEvents == numel(predictedIDs));
-    report.departureExecutedAtExpectedTime = ...
-        (executionTime == predictionTime + cfg.predictionHorizon);
+    report.departureReachedExpectedTime = ...
+        (executionTime == scheduledDepartureTime);
     report.twoUAVsDeparted = ...
         (activeAfterExecution == initialActive - numel(predictedIDs));
     report.singleBatchRekey = (statsAfterExecution.batchRekeys == 1);
@@ -140,7 +148,7 @@ function report = DTPredictedDepartureLifecycleTest(protocolName, swarmSize, ran
     fprintf('Initial active UAVs            : %d\n', initialActive);
     fprintf('Predicted UAVs                 : %s\n', mat2str(predictedIDs));
     fprintf('Prediction creation time      : %.1f s\n', predictionTime);
-    fprintf('Scheduled departure time      : %.1f s\n', report.scheduledDepartureTime);
+    fprintf('Scheduled departure time      : %.1f s\n', scheduledDepartureTime);
     fprintf('Execution time                : %.1f s\n', executionTime);
     fprintf('Predictions created           : %s\n', mat2str(predictionsCreated));
     fprintf('Departure events scheduled    : %d\n', queuedEvents);
@@ -150,12 +158,12 @@ function report = DTPredictedDepartureLifecycleTest(protocolName, swarmSize, ran
     fprintf('Local rekeys                  : %d\n', statsAfterExecution.localRekeys);
     fprintf('Leave events                  : %d\n', statsAfterExecution.leaveEvents);
     fprintf('Pending events after execute  : %d\n', queuedAfterExecution);
-    fprintf('Messages                     : %d\n', statsAfterExecution.totalMessages);
+    fprintf('Messages                      : %d\n', statsAfterExecution.totalMessages);
     fprintf('\n');
 
     if ~(report.predictionsCreatedCorrectly && ...
             report.twoDepartureEventsScheduled && ...
-            report.departureExecutedAtExpectedTime && ...
+            report.departureReachedExpectedTime && ...
             report.twoUAVsDeparted && ...
             report.singleBatchRekey && ...
             report.oneCollateralPredictionConsumed && ...
