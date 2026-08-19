@@ -1,9 +1,5 @@
 function result = runStochasticExperiment(protocolName, swarmSize, runID, randomSeed)
 %RUNSTOCHASTICEXPERIMENT Run one Poisson-driven stochastic simulation.
-%
-%   RESULT = RUNSTOCHASTICEXPERIMENT(PROTOCOLNAME,SWARMSIZE,RUNID,RANDOMSEED)
-%   executes the existing Simulation lifecycle using the configured
-%   Poisson event rates and optional Poisson DT disturbance process.
 
     if nargin < 2
         error('runStochasticExperiment:InvalidArguments', ...
@@ -66,6 +62,9 @@ function result = runStochasticExperiment(protocolName, swarmSize, runID, random
     result.failureRate = cfg.failureRate;
     result.dtDisturbanceEnabled = cfg.dtDisturbanceEnabled;
     result.dtDisturbanceRate = cfg.dtDisturbanceRate;
+    result.generatedJoinEvents = sim.generatedJoinEvents;
+    result.generatedLeaveEvents = sim.generatedLeaveEvents;
+    result.generatedFailureEvents = sim.generatedFailureEvents;
     result.dtDisturbanceCount = sim.dtDisturbanceCount;
 
     result.dtDepartureHazardModel = cfg.dtDepartureHazardModel;
