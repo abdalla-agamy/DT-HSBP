@@ -51,7 +51,19 @@ classdef Simulation < handle
             %--------------------------------------------------------------
             % 1. Generate stochastic membership events
             %--------------------------------------------------------------
-            eventCounts = obj.eventGenerator.generate();
+            suppressMembershipEvents = false;
+            if isfield(obj.cfg,'dtIntegrationSuppressMembershipEvents')
+                suppressMembershipEvents = ...
+                    logical(obj.cfg.dtIntegrationSuppressMembershipEvents);
+            end
+
+            if suppressMembershipEvents
+                eventCounts.join = 0;
+                eventCounts.leave = 0;
+                eventCounts.failure = 0;
+            else
+                eventCounts = obj.eventGenerator.generate();
+            end
 
             %--------------------------------------------------------------
             % 2. Convert membership counts into events
