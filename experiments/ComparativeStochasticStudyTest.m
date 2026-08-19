@@ -2,8 +2,8 @@ function report = ComparativeStochasticStudyTest(swarmSizes, repetitions, baseSe
 %COMPARATIVESTOCHASTICSTUDYTEST Validate paired HSBP/DTHSBP stochastic study design.
 %
 % Each protocol receives the same swarm size, repetition ID, and random seed.
-% The test verifies pairing, workload equality, and result completeness before
-% any performance-gain claims are made.
+% The test verifies pairing, equality of exogenous workloads, and result
+% completeness before any performance-gain claims are made.
 
     if nargin < 1 || isempty(swarmSizes)
         swarmSizes = [1000 2000];
@@ -37,8 +37,9 @@ function report = ComparativeStochasticStudyTest(swarmSizes, repetitions, baseSe
     totalRuns = numel(swarmSizes) * repetitions;
 
     required = {'protocol','initialSwarmSize','runID','randomSeed', ...
-        'joinEvents','leaveEvents','failureEvents','totalMessages', ...
-        'totalBytes','localRekeys','batchRekeys','success'};
+        'generatedJoinEvents','generatedLeaveEvents','generatedFailureEvents', ...
+        'dtDisturbanceCount','totalMessages','totalBytes', ...
+        'localRekeys','batchRekeys','success'};
 
     fieldsPresent = all(cellfun(@(f)isfield(results,f),required));
     successful = all([results.success]);
@@ -69,16 +70,21 @@ function report = ComparativeStochasticStudyTest(swarmSizes, repetitions, baseSe
                 (h.initialSwarmSize == d.initialSwarmSize) && ...
                 (h.runID == d.runID);
 
+            % Compare the exogenous workload, not executed membership events.
+            % Executed counts may legitimately diverge because a realized
+            % DT-predicted departure changes the membership state.
             workloadInvariant = workloadInvariant && ...
-                (h.joinEvents == d.joinEvents) && ...
-                (h.leaveEvents == d.leaveEvents) && ...
-                (h.failureEvents == d.failureEvents) && ...
+                (h.generatedJoinEvents == d.generatedJoinEvents) && ...
+                (h.generatedLeaveEvents == d.generatedLeaveEvents) && ...
+                (h.generatedFailureEvents == d.generatedFailureEvents) && ...
                 (h.dtDisturbanceCount == d.dtDisturbanceCount);
 
+            % HSBP may still compute DT observations/predictions because the
+            % Digital Twin layer is available to the simulation. What must be
+            % absent is DT-driven departure realization/materialization.
             dtOnlyInvariant = dtOnlyInvariant && ...
-                (h.dtPredictionsCreated == 0) && ...
                 (h.dtPredictionsRealized == 0) && ...
-                (h.dtPredictionsUnrealized == 0);
+                (h.predictedLeaves == 0);
         end
     end
 
