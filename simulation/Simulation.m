@@ -15,6 +15,9 @@ classdef Simulation < handle
         statistics
         currentTime = 0
         dtDisturbanceCount = 0
+        generatedJoinEvents = 0
+        generatedLeaveEvents = 0
+        generatedFailureEvents = 0
 
     end
 
@@ -64,6 +67,14 @@ classdef Simulation < handle
             else
                 eventCounts = obj.eventGenerator.generate();
             end
+
+            % Record the exogenous membership workload before event
+            % materialization. These counters are intentionally distinct
+            % from executed protocol events, which may diverge because
+            % protocol-driven DT departures can change membership state.
+            obj.generatedJoinEvents = obj.generatedJoinEvents + eventCounts.join;
+            obj.generatedLeaveEvents = obj.generatedLeaveEvents + eventCounts.leave;
+            obj.generatedFailureEvents = obj.generatedFailureEvents + eventCounts.failure;
 
             %--------------------------------------------------------------
             % 2. Convert membership counts into events
@@ -178,9 +189,6 @@ classdef Simulation < handle
                 return;
             end
 
-            % A DT-predicted departure is an actual membership departure.
-            % Route it through the normal protocol Leave path so that DTHSBP
-            % can perform its cluster-local batch rekey.
             obj.processLeaveRequest(uavID);
 
         end
@@ -219,9 +227,6 @@ classdef Simulation < handle
                     continue;
                 end
 
-                % Only materialize predictions created at this simulation
-                % time. This prevents persistent predictions from being
-                % counted repeatedly on later steps.
                 if abs(uav.dt.predictionTime - currentTime) > 1e-12
                     continue;
                 end
