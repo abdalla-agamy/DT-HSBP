@@ -42,10 +42,11 @@ function report = DTStochasticIntegrationTest(protocolName, swarmSize, randomSee
     baseCfg.dtDisturbanceEnabled = false;
     baseCfg.dtPredictedDepartureEnabled = true;
 
-    % Preserve the configured ordinary Leave hazard. It is the analytical
-    % anchor of the DT stochastic realization model. Ordinary stochastic
-    % Leave events are not generated because the test uses the actual Leave
-    % rate only as the DT hazard-model anchor.
+    % Preserve the configured ordinary Leave hazard as the analytical DT
+    % realization anchor. Ordinary Poisson membership events are suppressed
+    % in this controlled test through a dedicated simulation flag, so the
+    % Leave rate can remain nonzero for the DT hazard model.
+    baseCfg.dtIntegrationSuppressMembershipEvents = true;
 
     totalCreated = 0;
     totalRealized = 0;
