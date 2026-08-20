@@ -2,13 +2,15 @@ function result = runStochasticEventPerformance(protocolName, swarmSize, eventTy
 %RUNSTOCHASTICEVENTPERFORMANCE Run one stochastic Join/Leave performance run.
 %
 % The event count is generated from the existing Poisson membership model
-% over the configured simulation horizon. The same stochastic event count
-% and per-event seeds are used for all protocols in a paired study.
+% over the configured simulation horizon. The same stochastic event count,
+% event seeds, target clusters, and event-local UAV selections are used for
+% all protocols in a paired study.
 %
-% Join events use the existing controlled single-UAV Join experiment.
-% Leave events use the existing controlled multi-prediction Leave experiment,
-% which represents one DT-correlated batch-leave episode. The Poisson process
-% determines how many such episodes occur during the stochastic horizon.
+% Join events use the existing controlled single-UAV Join mechanism with a
+% stochastic target cluster. Leave events use the existing controlled
+% multi-prediction Leave mechanism, but the affected cluster, requester,
+% and disturbed UAVs are sampled per episode. Thus the workload is
+% stochastic without forcing a particular DT prediction outcome.
 %
 % This function is deliberately a performance-study wrapper. It does not
 % change the protocol or DT departure hazard model.
@@ -34,6 +36,10 @@ function result = runStochasticEventPerformance(protocolName, swarmSize, eventTy
     if ~isfield(cfg,'simulationTime') || cfg.simulationTime <= 0
         error('runStochasticEventPerformance:InvalidSimulationTime', ...
             'simulationTime must be positive.');
+    end
+    if mod(swarmSize, cfg.numClusters) ~= 0
+        error('runStochasticEventPerformance:InvalidConfiguration', ...
+            'swarmSize must be divisible by the number of clusters.');
     end
 
     %% Generate the stochastic event count from the existing Poisson model.
@@ -63,14 +69,17 @@ function result = runStochasticEventPerformance(protocolName, swarmSize, eventTy
 
     for eventIndex = 1:eventCount
         eventSeed = deriveSeed(randomSeed, 800000 + eventIndex);
+        [clusterID, leavingUAVID, disturbedUAVIDs] = ...
+            sampleEventWorkload(eventType, swarmSize, cfg.numClusters, eventSeed);
 
         switch eventType
             case "Join"
                 observation = runJoinExperiment( ...
-                    protocolName, swarmSize, 1, eventIndex, eventSeed);
+                    protocolName, swarmSize, clusterID, eventIndex, eventSeed);
             case "Leave"
                 observation = runLeaveExperiment( ...
-                    protocolName, swarmSize, 1, eventIndex, eventSeed);
+                    protocolName, swarmSize, clusterID, eventIndex, eventSeed, ...
+                    leavingUAVID, disturbedUAVIDs, [10 0]);
         end
 
         if ~observation.success
@@ -114,6 +123,27 @@ function result = runStochasticEventPerformance(protocolName, swarmSize, eventTy
     else
         result.status = "PartialFailure";
     end
+end
+
+function [clusterID, leavingUAVID, disturbedUAVIDs] = sampleEventWorkload(eventType, swarmSize, numClusters, eventSeed)
+%SAMPLEEVENTWORKLOAD Generate paired stochastic event-local workload data.
+
+    rng(eventSeed);
+    clusterSize = swarmSize / numClusters;
+    clusterID = randi(numClusters);
+
+    if eventType == "Join"
+        leavingUAVID = [];
+        disturbedUAVIDs = [];
+        return;
+    end
+
+    clusterStart = (clusterID - 1) * clusterSize + 1;
+    localIDs = randperm(clusterSize, 3);
+    selectedIDs = clusterStart + localIDs - 1;
+
+    leavingUAVID = selectedIDs(1);
+    disturbedUAVIDs = selectedIDs(2:3);
 end
 
 function seed = deriveSeed(baseSeed, offset)
