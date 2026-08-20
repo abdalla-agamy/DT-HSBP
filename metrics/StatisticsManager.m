@@ -25,6 +25,13 @@ classdef StatisticsManager < handle
         localRekeys = 0
         batchRekeys = 0
 
+        % Communication attribution by triggering event.
+        joinMessages = 0
+        leaveMessages = 0
+        failureMessages = 0
+        dtDrivenLeaveMessages = 0
+        dtBatchMessages = 0
+
         %-------------------------------
         totalMessages = 0
         totalEncryptions = 0
@@ -43,9 +50,7 @@ classdef StatisticsManager < handle
     methods
 
         function obj = StatisticsManager(cfg)
-
             obj.cfg = cfg;
-
         end
 
         function incrementJoin(obj)
@@ -85,7 +90,13 @@ classdef StatisticsManager < handle
             obj.rejectedJoins = obj.rejectedJoins + 1;
         end
 
-        function recordRekey(obj, isBatch, result)
+        function recordRekey(obj, isBatch, result, eventType)
+            if nargin < 4 || isempty(eventType)
+                eventType = "unknown";
+            else
+                eventType = string(eventType);
+            end
+
             obj.totalMessages = obj.totalMessages + result.messagesSent;
             obj.totalEncryptions = obj.totalEncryptions + result.encryptions;
             obj.totalKeysGenerated = obj.totalKeysGenerated + result.keysGenerated;
@@ -103,43 +114,30 @@ classdef StatisticsManager < handle
             else
                 obj.localRekeys = obj.localRekeys + 1;
             end
+
+            switch eventType
+                case "join"
+                    obj.joinMessages = obj.joinMessages + result.messagesSent;
+                case "leave"
+                    obj.leaveMessages = obj.leaveMessages + result.messagesSent;
+                case "failure"
+                    obj.failureMessages = obj.failureMessages + result.messagesSent;
+                case "dtDrivenLeave"
+                    obj.dtDrivenLeaveMessages = obj.dtDrivenLeaveMessages + result.messagesSent;
+                case "dtBatch"
+                    obj.dtBatchMessages = obj.dtBatchMessages + result.messagesSent;
+            end
         end
 
-        function n = getJoinEvents(obj)
-            n = obj.joinEvents;
-        end
-
-        function n = getLeaveEvents(obj)
-            n = obj.leaveEvents;
-        end
-
-        function n = getFailureEvents(obj)
-            n = obj.failureEvents;
-        end
-
-        function n = getPredictedLeaves(obj)
-            n = obj.predictedLeaves;
-        end
-
-        function n = getDTPredictionsCreated(obj)
-            n = obj.dtPredictionsCreated;
-        end
-
-        function n = getDTPredictionsRealized(obj)
-            n = obj.dtPredictionsRealized;
-        end
-
-        function n = getRejectedJoins(obj)
-            n = obj.rejectedJoins;
-        end
-
-        function n = getLocalRekeys(obj)
-            n = obj.localRekeys;
-        end
-
-        function n = getBatchRekeys(obj)
-            n = obj.batchRekeys;
-        end
+        function n = getJoinEvents(obj), n = obj.joinEvents; end
+        function n = getLeaveEvents(obj), n = obj.leaveEvents; end
+        function n = getFailureEvents(obj), n = obj.failureEvents; end
+        function n = getPredictedLeaves(obj), n = obj.predictedLeaves; end
+        function n = getDTPredictionsCreated(obj), n = obj.dtPredictionsCreated; end
+        function n = getDTPredictionsRealized(obj), n = obj.dtPredictionsRealized; end
+        function n = getRejectedJoins(obj), n = obj.rejectedJoins; end
+        function n = getLocalRekeys(obj), n = obj.localRekeys; end
+        function n = getBatchRekeys(obj), n = obj.batchRekeys; end
 
         function stats = getStatistics(obj)
             stats.joinEvents = obj.joinEvents;
@@ -162,6 +160,12 @@ classdef StatisticsManager < handle
             end
 
             stats.rejectedJoins = obj.rejectedJoins;
+
+            stats.joinMessages = obj.joinMessages;
+            stats.leaveMessages = obj.leaveMessages;
+            stats.failureMessages = obj.failureMessages;
+            stats.dtDrivenLeaveMessages = obj.dtDrivenLeaveMessages;
+            stats.dtBatchMessages = obj.dtBatchMessages;
 
             stats.totalMessages = obj.totalMessages;
             stats.totalEncryptions = obj.totalEncryptions;
@@ -187,6 +191,12 @@ classdef StatisticsManager < handle
 
             obj.localRekeys = 0;
             obj.batchRekeys = 0;
+
+            obj.joinMessages = 0;
+            obj.leaveMessages = 0;
+            obj.failureMessages = 0;
+            obj.dtDrivenLeaveMessages = 0;
+            obj.dtBatchMessages = 0;
 
             obj.totalMessages = 0;
             obj.totalEncryptions = 0;
