@@ -72,6 +72,7 @@ function result = runStochasticExperiment(protocolName, swarmSize, runID, random
     result.dtPredictionsRealized = stats.dtPredictionsRealized;
     result.dtPredictionsUnrealized = stats.dtPredictionsUnrealized;
     result.dtRealizationRatio = stats.dtRealizationRatio;
+    result.dtDrivenLeaveEvents = sim.dtDrivenLeaveEvents;
 
     result.joinEvents = stats.joinEvents;
     result.leaveEvents = stats.leaveEvents;
