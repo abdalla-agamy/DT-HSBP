@@ -68,10 +68,6 @@ classdef Simulation < handle
                 eventCounts = obj.eventGenerator.generate();
             end
 
-            % Record the exogenous membership workload before event
-            % materialization. These counters are intentionally distinct
-            % from executed protocol events, which may diverge because
-            % protocol-driven DT departures can change membership state.
             obj.generatedJoinEvents = obj.generatedJoinEvents + eventCounts.join;
             obj.generatedLeaveEvents = obj.generatedLeaveEvents + eventCounts.leave;
             obj.generatedFailureEvents = obj.generatedFailureEvents + eventCounts.failure;
