@@ -51,7 +51,7 @@ cfg.mtu          = 1500;      % Bytes
 %  Simulation
 % ================================
 cfg.timeStep     = 1;         % Second
-cfg.simulationTime = 10;     % Seconds
+cfg.simulationTime = 100;     % Seconds
 
 %% ===============================
 % Stochastic Event Model
