@@ -12,14 +12,13 @@ function result = runStochasticExperiment(protocolName, swarmSize, runID, random
         randomSeed = 42;
     end
 
-    swarmSize = validatePositiveInteger(swarmSize, 'swarmSize');
-    runID = validatePositiveInteger(runID, 'runID');
-    randomSeed = validateNonnegativeInteger(randomSeed, 'randomSeed');
+    swarmSize = validatePositiveInteger(swarmSize,'swarmSize');
+    runID = validatePositiveInteger(runID,'runID');
+    randomSeed = validateNonnegativeInteger(randomSeed,'randomSeed');
 
     cfg = config();
     cfg.numUAVs = swarmSize;
-
-    if mod(cfg.numUAVs, cfg.numClusters) ~= 0
+    if mod(cfg.numUAVs,cfg.numClusters) ~= 0
         error('runStochasticExperiment:InvalidConfiguration', ...
             'swarmSize must be divisible by the number of clusters.');
     end
@@ -29,7 +28,6 @@ function result = runStochasticExperiment(protocolName, swarmSize, runID, random
     rng(randomSeed);
 
     swarm = Swarm(cfg);
-
     switch string(protocolName)
         case "FlatSBP"
             protocol = FlatSBP(swarm);
@@ -38,13 +36,11 @@ function result = runStochasticExperiment(protocolName, swarmSize, runID, random
         case "DTHSBP"
             protocol = DTHSBP(swarm);
         otherwise
-            error('runStochasticExperiment:UnknownProtocol', ...
-                'Unknown protocol: %s', string(protocolName));
+            error('runStochasticExperiment:UnknownProtocol','Unknown protocol: %s',string(protocolName));
     end
 
-    sim = Simulation(cfg, protocol);
+    sim = Simulation(cfg,protocol);
     sim.run();
-
     stats = sim.statistics.getStatistics();
 
     result = struct();
@@ -79,15 +75,19 @@ function result = runStochasticExperiment(protocolName, swarmSize, runID, random
     result.leaveEvents = stats.leaveEvents;
     result.failureEvents = stats.failureEvents;
     result.rejectedJoins = stats.rejectedJoins;
-
     result.predictedLeaves = stats.predictedLeaves;
     result.localRekeys = stats.localRekeys;
     result.batchRekeys = stats.batchRekeys;
 
+    result.joinMessages = stats.joinMessages;
+    result.leaveMessages = stats.leaveMessages;
+    result.failureMessages = stats.failureMessages;
+    result.dtDrivenLeaveMessages = stats.dtDrivenLeaveMessages;
+    result.dtBatchMessages = stats.dtBatchMessages;
+
     result.totalMessages = stats.totalMessages;
     result.totalBytes = stats.totalBytes;
     result.communicationCost = stats.communicationCost;
-
     result.totalEncryptions = stats.totalEncryptions;
     result.totalKeysGenerated = stats.totalKeysGenerated;
     result.totalDecryptions = stats.totalDecryptions;
@@ -96,21 +96,16 @@ function result = runStochasticExperiment(protocolName, swarmSize, runID, random
 
     result.success = true;
     result.status = "Success";
-
 end
 
-function value = validatePositiveInteger(value, name)
-    if ~isscalar(value) || ~isnumeric(value) || ~isfinite(value) || ...
-            value < 1 || mod(value, 1) ~= 0
-        error('runStochasticExperiment:InvalidArgument', ...
-            '%s must be a positive integer.', name);
+function value = validatePositiveInteger(value,name)
+    if ~isscalar(value) || ~isnumeric(value) || ~isfinite(value) || value < 1 || mod(value,1) ~= 0
+        error('runStochasticExperiment:InvalidArgument','%s must be a positive integer.',name);
     end
 end
 
-function value = validateNonnegativeInteger(value, name)
-    if ~isscalar(value) || ~isnumeric(value) || ~isfinite(value) || ...
-            value < 0 || mod(value, 1) ~= 0
-        error('runStochasticExperiment:InvalidArgument', ...
-            '%s must be a non-negative integer.', name);
+function value = validateNonnegativeInteger(value,name)
+    if ~isscalar(value) || ~isnumeric(value) || ~isfinite(value) || value < 0 || mod(value,1) ~= 0
+        error('runStochasticExperiment:InvalidArgument','%s must be a non-negative integer.',name);
     end
 end
