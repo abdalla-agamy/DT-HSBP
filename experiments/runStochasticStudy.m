@@ -1,4 +1,4 @@
-function results = runStochasticStudy(protocols, swarmSizes, repetitions, baseSeed, varargin)
+function results = runStochasticStudy(protocols,swarmSizes,repetitions,baseSeed,varargin)
 %RUNSTOCHASTICSTUDY Execute repeated Poisson-driven stochastic studies.
 
     p = inputParser;
@@ -14,9 +14,7 @@ function results = runStochasticStudy(protocols, swarmSizes, repetitions, baseSe
     protocols = string(protocols(:));
     swarmSizes = swarmSizes(:).';
 
-    if isempty(protocols)
-        error('runStochasticStudy:EmptyProtocols','At least one protocol is required.');
-    end
+    if isempty(protocols), error('runStochasticStudy:EmptyProtocols','At least one protocol is required.'); end
     if any(~ismember(protocols,["FlatSBP","HSBP","DTHSBP"]))
         error('runStochasticStudy:UnknownProtocol','Protocols must be FlatSBP, HSBP, or DTHSBP.');
     end
@@ -35,7 +33,7 @@ function results = runStochasticStudy(protocols, swarmSizes, repetitions, baseSe
              'Install/enable it or set UseParallel=false.']);
     end
 
-    totalRuns = numel(protocols) * numel(swarmSizes) * repetitions;
+    totalRuns = numel(protocols)*numel(swarmSizes)*repetitions;
     results = repmat(emptyResult(),totalRuns,1);
 
     runPlan = repmat(struct('protocol',"",'swarmSize',0,'runID',0,'seed',0),totalRuns,1);
@@ -98,6 +96,11 @@ function result = emptyResult()
         'predictedLeaves',0, ...
         'localRekeys',0, ...
         'batchRekeys',0, ...
+        'joinMessages',0, ...
+        'leaveMessages',0, ...
+        'failureMessages',0, ...
+        'dtDrivenLeaveMessages',0, ...
+        'dtBatchMessages',0, ...
         'totalMessages',0, ...
         'totalBytes',0, ...
         'communicationCost',0, ...
