@@ -19,6 +19,7 @@ classdef Simulation < handle
         generatedLeaveEvents = 0
         generatedFailureEvents = 0
         dtDrivenLeaveEvents = 0
+        dtCollateralDepartureEvents = 0
 
     end
 
@@ -329,8 +330,10 @@ classdef Simulation < handle
 
             if ~isempty(rekeyResult)
                 if ~isempty(rekeyResult.predictedLeaves)
-                    obj.statistics.incrementPredictedLeaves( ...
-                        numel(rekeyResult.predictedLeaves));
+                    collateralCount = numel(rekeyResult.predictedLeaves);
+                    obj.dtCollateralDepartureEvents = ...
+                        obj.dtCollateralDepartureEvents + collateralCount;
+                    obj.statistics.incrementPredictedLeaves(collateralCount);
                     obj.statistics.recordRekey(true,rekeyResult);
                 else
                     obj.statistics.recordRekey(false,rekeyResult);
@@ -363,8 +366,10 @@ classdef Simulation < handle
 
             if ~isempty(rekeyResult)
                 if ~isempty(rekeyResult.predictedLeaves)
-                    obj.statistics.incrementPredictedLeaves( ...
-                        numel(rekeyResult.predictedLeaves));
+                    collateralCount = numel(rekeyResult.predictedLeaves);
+                    obj.dtCollateralDepartureEvents = ...
+                        obj.dtCollateralDepartureEvents + collateralCount;
+                    obj.statistics.incrementPredictedLeaves(collateralCount);
                     obj.statistics.recordRekey(true,rekeyResult);
                 else
                     obj.statistics.recordRekey(false,rekeyResult);
@@ -421,7 +426,8 @@ classdef Simulation < handle
             fprintf('DT Unrealized      : %d\n', stats.dtPredictionsUnrealized);
             fprintf('DT Realization     : %.6f\n', stats.dtRealizationRatio);
             fprintf('Predicted Leaves   : %d\n', stats.predictedLeaves);
-            fprintf('DT-Driven Leaves   : %d\n', obj.dtDrivenLeaveEvents);
+            fprintf('DT Driven Leaves   : %d\n', obj.dtDrivenLeaveEvents);
+            fprintf('DT Collateral      : %d\n', obj.dtCollateralDepartureEvents);
             fprintf('Rejected Joins     : %d\n', stats.rejectedJoins);
             fprintf('Local Rekeys       : %d\n', stats.localRekeys);
             fprintf('Batch Rekeys       : %d\n', stats.batchRekeys);
