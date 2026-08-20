@@ -1,7 +1,6 @@
 classdef Simulation < handle
 
     properties
-
         swarm
         protocol
         cfg
@@ -9,9 +8,7 @@ classdef Simulation < handle
         eventGenerator
         eventFactory
         dtDisturbanceGenerator
-
         dtManager
-
         statistics
         currentTime = 0
         dtDisturbanceCount = 0
@@ -20,13 +17,11 @@ classdef Simulation < handle
         generatedFailureEvents = 0
         dtDrivenLeaveEvents = 0
         dtCollateralDepartureEvents = 0
-
     end
 
     methods
 
         function obj = Simulation(cfg, protocol)
-
             obj.cfg = cfg;
             obj.protocol = protocol;
             obj.swarm = protocol.swarm;
@@ -36,30 +31,22 @@ classdef Simulation < handle
             obj.eventGenerator = PoissonEventGenerator(obj.cfg);
             obj.eventFactory = EventFactory(obj.swarm);
             obj.dtDisturbanceGenerator = DTDisturbanceGenerator(obj.cfg);
-
             obj.dtManager = DigitalTwinManager(obj.cfg);
 
             initialUAVs = obj.swarm.getActiveUAVs();
-
             for i = 1:numel(initialUAVs)
                 obj.dtManager.registerUAV(initialUAVs(i));
             end
 
             obj.statistics = StatisticsManager(obj.cfg);
-
         end
 
         function step(obj)
-
             obj.cfg.currentTime = obj.currentTime;
 
-            %--------------------------------------------------------------
-            % 1. Generate stochastic membership events
-            %--------------------------------------------------------------
             suppressMembershipEvents = false;
             if isfield(obj.cfg,'dtIntegrationSuppressMembershipEvents')
-                suppressMembershipEvents = ...
-                    logical(obj.cfg.dtIntegrationSuppressMembershipEvents);
+                suppressMembershipEvents = logical(obj.cfg.dtIntegrationSuppressMembershipEvents);
             end
 
             if suppressMembershipEvents
@@ -74,60 +61,34 @@ classdef Simulation < handle
             obj.generatedLeaveEvents = obj.generatedLeaveEvents + eventCounts.leave;
             obj.generatedFailureEvents = obj.generatedFailureEvents + eventCounts.failure;
 
-            %--------------------------------------------------------------
-            % 2. Convert membership counts into events
-            %--------------------------------------------------------------
-            events = obj.eventFactory.createEvents( ...
-                eventCounts, ...
-                obj.currentTime);
-
-            %--------------------------------------------------------------
-            % 3. Schedule membership events
-            %--------------------------------------------------------------
+            events = obj.eventFactory.createEvents(eventCounts,obj.currentTime);
             for i = 1:numel(events)
                 obj.eventQueue.schedule(events{i});
             end
 
-            %--------------------------------------------------------------
-            % 4. Generate independent physical DT disturbances
-            %--------------------------------------------------------------
             disturbanceCount = obj.dtDisturbanceGenerator.generate();
             disturbanceEvents = obj.createDisturbanceEvents(disturbanceCount);
-
             for i = 1:numel(disturbanceEvents)
                 obj.eventQueue.schedule(disturbanceEvents{i});
             end
 
-            %--------------------------------------------------------------
-            % 5. Execute events scheduled for this simulation time
-            %--------------------------------------------------------------
             obj.processEvents();
 
-            %--------------------------------------------------------------
-            % 6. Advance physical state and Digital Twin observation
-            %--------------------------------------------------------------
             obj.swarm.step(obj.cfg);
             obj.currentTime = obj.currentTime + obj.cfg.timeStep;
             obj.cfg.currentTime = obj.currentTime;
             obj.updateDigitalTwins();
-
-            %--------------------------------------------------------------
-            % 7. Materialize persistent DT predicted departures
-            %--------------------------------------------------------------
             obj.schedulePredictedDepartures();
-
         end
 
-        function events = createDisturbanceEvents(obj, count)
+        function events = createDisturbanceEvents(obj,count)
             events = {};
-
             if count <= 0
                 return;
             end
 
             for k = 1:count
                 cluster = obj.selectDisturbanceCluster();
-
                 if isempty(cluster)
                     continue;
                 end
@@ -137,22 +98,17 @@ classdef Simulation < handle
                     continue;
                 end
 
-                requestedCount = obj.cfg.dtDisturbanceUAVCount;
-                requestedCount = max(1, floor(requestedCount));
-                selectedCount = min(requestedCount, numel(activeUAVs));
-
+                requestedCount = max(1,floor(obj.cfg.dtDisturbanceUAVCount));
+                selectedCount = min(requestedCount,numel(activeUAVs));
                 if selectedCount == numel(activeUAVs)
                     selected = activeUAVs;
                 else
-                    selected = activeUAVs(randperm(numel(activeUAVs), selectedCount));
+                    selected = activeUAVs(randperm(numel(activeUAVs),selectedCount));
                 end
 
                 ids = [selected.id];
-
                 events{end+1} = DTDisturbanceEvent( ...
-                    obj.currentTime, ...
-                    cluster.id, ...
-                    ids, ...
+                    obj.currentTime,cluster.id,ids, ...
                     obj.cfg.dtDisturbancePositionStep, ...
                     obj.cfg.dtDisturbanceVelocityStep, ...
                     obj.cfg.dtDisturbanceEnergyDrop);
@@ -163,7 +119,6 @@ classdef Simulation < handle
 
         function cluster = selectDisturbanceCluster(obj)
             eligible = [];
-
             for i = 1:numel(obj.swarm.clusters)
                 if ~isempty(obj.swarm.clusters(i).getActiveUAVs())
                     eligible(end+1) = i;
@@ -180,20 +135,16 @@ classdef Simulation < handle
         end
 
         function processPredictedDeparture(obj,uavID,reason)
-
             uav = obj.swarm.findUAV(uavID);
-
             if isempty(uav) || ~uav.active
                 return;
             end
 
             obj.dtDrivenLeaveEvents = obj.dtDrivenLeaveEvents + 1;
-            obj.processLeaveRequest(uavID);
-
+            obj.processLeaveRequest(uavID,"dtDrivenLeave");
         end
 
         function schedulePredictedDepartures(obj)
-
             if ~isa(obj.protocol,"DTHSBP")
                 return;
             end
@@ -202,7 +153,6 @@ classdef Simulation < handle
             if isfield(obj.cfg,'dtPredictedDepartureEnabled')
                 enabled = logical(obj.cfg.dtPredictedDepartureEnabled);
             end
-
             if ~enabled
                 return;
             end
@@ -213,65 +163,43 @@ classdef Simulation < handle
 
             for i = 1:numel(activeUAVs)
                 uav = activeUAVs(i);
-
-                if isempty(uav.dt)
+                if isempty(uav.dt) || ~uav.dt.predictedLeave || isnan(uav.dt.predictionTime)
                     continue;
                 end
-
-                if ~uav.dt.predictedLeave
-                    continue;
-                end
-
-                if isnan(uav.dt.predictionTime)
-                    continue;
-                end
-
                 if abs(uav.dt.predictionTime - currentTime) > 1e-12
                     continue;
                 end
 
                 probability = obj.computeDTDepartureProbability( ...
-                    uav.dt.stabilityScore, ...
-                    obj.cfg.predictionHorizon);
-
+                    uav.dt.stabilityScore,obj.cfg.predictionHorizon);
                 if rand() > probability
                     continue;
                 end
 
                 obj.statistics.incrementDTPredictionsRealized();
-
-                obj.eventQueue.schedule( ...
-                    DTPredictedDepartureEvent( ...
-                        departureTime, ...
-                        uav.id, ...
-                        "DT-predicted instability"));
+                obj.eventQueue.schedule(DTPredictedDepartureEvent( ...
+                    departureTime,uav.id,"DT-predicted instability"));
             end
-
         end
 
-        function probability = computeDTDepartureProbability(obj, stabilityScore, horizon)
-            validateattributes(stabilityScore, ...
-                {'numeric'}, {'scalar','real','finite','nonnegative'});
-            validateattributes(horizon, ...
-                {'numeric'}, {'scalar','real','finite','nonnegative'});
+        function probability = computeDTDepartureProbability(obj,stabilityScore,horizon)
+            validateattributes(stabilityScore,{'numeric'},{'scalar','real','finite','nonnegative'});
+            validateattributes(horizon,{'numeric'},{'scalar','real','finite','nonnegative'});
 
             if ~isfield(obj.cfg,'dtDepartureHazardModel') || ...
-                    string(obj.cfg.dtDepartureHazardModel) ~= ...
-                    "threshold_anchored_exponential"
-                error('Simulation:UnsupportedDTHazardModel', ...
-                    'Unsupported DT departure hazard model.');
+                    string(obj.cfg.dtDepartureHazardModel) ~= "threshold_anchored_exponential"
+                error('Simulation:UnsupportedDTHazardModel','Unsupported DT departure hazard model.');
             end
 
             theta = obj.cfg.thetaLeave;
             leaveRate = obj.cfg.leaveRate;
-
             if stabilityScore <= 0 || theta <= 0 || leaveRate <= 0 || horizon <= 0
                 probability = 0;
                 return;
             end
 
-            hazard = leaveRate * exp(stabilityScore / theta - 1);
-            probability = 1 - exp(-hazard * horizon);
+            hazard = leaveRate * exp(stabilityScore/theta - 1);
+            probability = 1 - exp(-hazard*horizon);
             probability = max(0,min(1,probability));
         end
 
@@ -290,7 +218,6 @@ classdef Simulation < handle
 
         function processJoinRequest(obj,uavID,clusterID)
             rekeyResult = obj.protocol.join(uavID,clusterID);
-
             if isempty(rekeyResult)
                 obj.statistics.incrementRejectedJoin();
                 return;
@@ -302,10 +229,16 @@ classdef Simulation < handle
             end
 
             obj.statistics.incrementJoin();
-            obj.statistics.recordRekey(false,rekeyResult);
+            obj.statistics.recordRekey(false,rekeyResult,"join");
         end
 
-        function processLeaveRequest(obj,uavID)
+        function processLeaveRequest(obj,uavID,eventType)
+            if nargin < 3 || isempty(eventType)
+                eventType = "leave";
+            else
+                eventType = string(eventType);
+            end
+
             decision = obj.makeLeaveDecision(uavID);
             if ~decision.approved
                 return;
@@ -319,24 +252,27 @@ classdef Simulation < handle
             rekeyResult = obj.protocol.leave(uavID);
             obj.dtManager.removeUAV(uavID);
 
+            collateralCount = 0;
             if ~isempty(rekeyResult)
                 predictedLeaves = rekeyResult.predictedLeaves;
                 for i = 1:numel(predictedLeaves)
                     obj.dtManager.removeUAV(predictedLeaves(i));
                 end
+                collateralCount = numel(predictedLeaves);
             end
 
             obj.statistics.incrementLeave();
 
             if ~isempty(rekeyResult)
-                if ~isempty(rekeyResult.predictedLeaves)
-                    collateralCount = numel(rekeyResult.predictedLeaves);
+                if collateralCount > 0
                     obj.dtCollateralDepartureEvents = ...
                         obj.dtCollateralDepartureEvents + collateralCount;
                     obj.statistics.incrementPredictedLeaves(collateralCount);
-                    obj.statistics.recordRekey(true,rekeyResult);
+                    obj.statistics.recordRekey(true,rekeyResult,"dtBatch");
+                elseif eventType == "dtDrivenLeave"
+                    obj.statistics.recordRekey(true,rekeyResult,"dtDrivenLeave");
                 else
-                    obj.statistics.recordRekey(false,rekeyResult);
+                    obj.statistics.recordRekey(false,rekeyResult,"leave");
                 end
             end
         end
@@ -355,39 +291,40 @@ classdef Simulation < handle
             rekeyResult = obj.protocol.failure(uavID);
             obj.dtManager.removeUAV(uavID);
 
+            collateralCount = 0;
             if ~isempty(rekeyResult)
                 predictedLeaves = rekeyResult.predictedLeaves;
                 for i = 1:numel(predictedLeaves)
                     obj.dtManager.removeUAV(predictedLeaves(i));
                 end
+                collateralCount = numel(predictedLeaves);
             end
 
             obj.statistics.incrementFailure();
 
             if ~isempty(rekeyResult)
-                if ~isempty(rekeyResult.predictedLeaves)
-                    collateralCount = numel(rekeyResult.predictedLeaves);
+                if collateralCount > 0
                     obj.dtCollateralDepartureEvents = ...
                         obj.dtCollateralDepartureEvents + collateralCount;
                     obj.statistics.incrementPredictedLeaves(collateralCount);
-                    obj.statistics.recordRekey(true,rekeyResult);
+                    obj.statistics.recordRekey(true,rekeyResult,"dtBatch");
                 else
-                    obj.statistics.recordRekey(false,rekeyResult);
+                    obj.statistics.recordRekey(false,rekeyResult,"failure");
                 end
             end
         end
 
-        function result = makeAdmissionDecision(obj, candidateUAV)
+        function result = makeAdmissionDecision(obj,candidateUAV)
             result.accepted = true;
             result.reason = "Accepted";
         end
 
-        function decision = makeLeaveDecision(obj, uavID)
+        function decision = makeLeaveDecision(obj,uavID)
             decision.approved = true;
             decision.reason = "Approved";
         end
 
-        function decision = makeFailureDecision(obj, uavID, reason)
+        function decision = makeFailureDecision(obj,uavID,reason)
             decision.approved = true;
             decision.reason = "Approved";
         end
@@ -414,33 +351,36 @@ classdef Simulation < handle
 
         function printStatistics(obj)
             stats = obj.statistics.getStatistics();
-
             fprintf('\n');
             fprintf('========== Simulation Statistics ==========\n');
-            fprintf('Join Events        : %d\n', stats.joinEvents);
-            fprintf('Leave Events       : %d\n', stats.leaveEvents);
-            fprintf('Failure Events     : %d\n', stats.failureEvents);
-            fprintf('DT Disturbances    : %d\n', obj.dtDisturbanceCount);
-            fprintf('DT Predictions     : %d\n', stats.dtPredictionsCreated);
-            fprintf('DT Realized        : %d\n', stats.dtPredictionsRealized);
-            fprintf('DT Unrealized      : %d\n', stats.dtPredictionsUnrealized);
-            fprintf('DT Realization     : %.6f\n', stats.dtRealizationRatio);
-            fprintf('Predicted Leaves   : %d\n', stats.predictedLeaves);
-            fprintf('DT Driven Leaves   : %d\n', obj.dtDrivenLeaveEvents);
-            fprintf('DT Collateral      : %d\n', obj.dtCollateralDepartureEvents);
-            fprintf('Rejected Joins     : %d\n', stats.rejectedJoins);
-            fprintf('Local Rekeys       : %d\n', stats.localRekeys);
-            fprintf('Batch Rekeys       : %d\n', stats.batchRekeys);
-            fprintf('Messages Sent      : %d\n', stats.totalMessages);
-            fprintf('Bytes Transmitted  : %d\n', stats.totalBytes);
-            fprintf('Communication Cost : %.0f\n', stats.communicationCost);
-            fprintf('Encryptions        : %d\n', stats.totalEncryptions);
-            fprintf('Decryptions        : %d\n', stats.totalDecryptions);
-            fprintf('Hash Operations    : %d\n', stats.totalHashOperations);
-            fprintf('Random Numbers     : %d\n', stats.totalRandomNumbers);
+            fprintf('Join Events        : %d\n',stats.joinEvents);
+            fprintf('Leave Events       : %d\n',stats.leaveEvents);
+            fprintf('Failure Events     : %d\n',stats.failureEvents);
+            fprintf('DT Disturbances    : %d\n',obj.dtDisturbanceCount);
+            fprintf('DT Predictions     : %d\n',stats.dtPredictionsCreated);
+            fprintf('DT Realized        : %d\n',stats.dtPredictionsRealized);
+            fprintf('DT Unrealized      : %d\n',stats.dtPredictionsUnrealized);
+            fprintf('DT Realization     : %.6f\n',stats.dtRealizationRatio);
+            fprintf('Predicted Leaves   : %d\n',stats.predictedLeaves);
+            fprintf('DT Driven Leaves   : %d\n',obj.dtDrivenLeaveEvents);
+            fprintf('DT Collateral      : %d\n',obj.dtCollateralDepartureEvents);
+            fprintf('Rejected Joins     : %d\n',stats.rejectedJoins);
+            fprintf('Local Rekeys       : %d\n',stats.localRekeys);
+            fprintf('Batch Rekeys       : %d\n',stats.batchRekeys);
+            fprintf('Join Messages      : %d\n',stats.joinMessages);
+            fprintf('Leave Messages     : %d\n',stats.leaveMessages);
+            fprintf('Failure Messages   : %d\n',stats.failureMessages);
+            fprintf('DT Leave Messages  : %d\n',stats.dtDrivenLeaveMessages);
+            fprintf('DT Batch Messages  : %d\n',stats.dtBatchMessages);
+            fprintf('Messages Sent      : %d\n',stats.totalMessages);
+            fprintf('Bytes Transmitted  : %d\n',stats.totalBytes);
+            fprintf('Communication Cost : %.0f\n',stats.communicationCost);
+            fprintf('Encryptions        : %d\n',stats.totalEncryptions);
+            fprintf('Decryptions        : %d\n',stats.totalDecryptions);
+            fprintf('Hash Operations    : %d\n',stats.totalHashOperations);
+            fprintf('Random Numbers     : %d\n',stats.totalRandomNumbers);
             fprintf('===========================================\n');
         end
 
     end
-
 end
