@@ -18,6 +18,7 @@ classdef Simulation < handle
         generatedJoinEvents = 0
         generatedLeaveEvents = 0
         generatedFailureEvents = 0
+        dtDrivenLeaveEvents = 0
 
     end
 
@@ -185,6 +186,7 @@ classdef Simulation < handle
                 return;
             end
 
+            obj.dtDrivenLeaveEvents = obj.dtDrivenLeaveEvents + 1;
             obj.processLeaveRequest(uavID);
 
         end
@@ -419,6 +421,7 @@ classdef Simulation < handle
             fprintf('DT Unrealized      : %d\n', stats.dtPredictionsUnrealized);
             fprintf('DT Realization     : %.6f\n', stats.dtRealizationRatio);
             fprintf('Predicted Leaves   : %d\n', stats.predictedLeaves);
+            fprintf('DT-Driven Leaves   : %d\n', obj.dtDrivenLeaveEvents);
             fprintf('Rejected Joins     : %d\n', stats.rejectedJoins);
             fprintf('Local Rekeys       : %d\n', stats.localRekeys);
             fprintf('Batch Rekeys       : %d\n', stats.batchRekeys);
