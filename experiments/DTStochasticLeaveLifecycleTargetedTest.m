@@ -108,9 +108,9 @@ function report = DTStochasticLeaveLifecycleTargetedTest()
     cluster1 = swarm5.findCluster(1);
     members1 = cluster1.getActiveUAVs();
     u1 = members1(2); u2 = members1(3); u3 = members1(4);
-    u1.position = u1.position + [10 0];
-    u2.position = u2.position + [10 0];
-    sim5.updateDigitalTwins();
+    sim5.eventQueue.schedule(DTDisturbanceEvent( ...
+        sim5.currentTime + cfg5.timeStep, 1, [u1.id, u2.id], [10 0], [0 0], 0));
+    sim5.step();
     % Trigger leave on u3
     sim5.processLeaveRequest(u3.id, "leave");
     stats5 = sim5.statistics.getStatistics();
@@ -129,11 +129,13 @@ function report = DTStochasticLeaveLifecycleTargetedTest()
     sim6.updateDigitalTwins();
     uC1 = swarm6.findCluster(1).getActiveUAVs();
     uC2 = swarm6.findCluster(2).getActiveUAVs();
-    uC1(2).position = uC1(2).position + [10 0];
-    uC2(2).position = uC2(2).position + [10 0];
-    sim6.updateDigitalTwins();
-    sim6.processLeaveRequest(uC1(1).id, "leave");
-    sim6.processLeaveRequest(uC2(1).id, "leave");
+    sim6.eventQueue.schedule(DTDisturbanceEvent( ...
+        sim6.currentTime + cfg6.timeStep, 1, uC1(2).id, [10 0], [0 0], 0));
+    sim6.eventQueue.schedule(DTDisturbanceEvent( ...
+        sim6.currentTime + cfg6.timeStep, 2, uC2(2).id, [10 0], [0 0], 0));
+    sim6.step();
+    sim6.processLeaveRequest(uC1(3).id, "leave");
+    sim6.processLeaveRequest(uC2(3).id, "leave");
     stats6 = sim6.statistics.getStatistics();
     assert(stats6.batchRekeys == 2, 'Test 6 failed: expected 2 separate batch rekeys for 2 clusters');
     fprintf('  PASS: Departures in separate clusters maintain localized batch rekeys\n');

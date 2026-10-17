@@ -38,6 +38,8 @@ classdef Cluster < handle
 
                 if obj.uavs(i).id == uavID
 
+                    obj.uavs(i).active = false;
+
                     wasHead = ~isempty(obj.head) && ...
                         obj.head.id == uavID;
 
