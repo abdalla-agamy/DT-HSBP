@@ -173,6 +173,7 @@ classdef Simulation < handle
                 probability = obj.computeDTDepartureProbability( ...
                     uav.dt.stabilityScore,obj.cfg.predictionHorizon);
                 if rand() > probability
+                    uav.dt.cancelPrediction();
                     continue;
                 end
 
