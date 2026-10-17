@@ -158,9 +158,8 @@ function report = DTStochasticLeaveLifecycleTargetedTest()
     % Test 8: No duplicate membership removals
     % ----------------------------------------------------
     fprintf('Test 8: No duplicate membership removals...\n');
-    initialCount = swarm5.totalUAVs();
     activeCount = swarm5.activeUAVs();
-    assert(initialCount - activeCount == 3, 'Test 8 failed: exactly 3 UAVs should have been removed');
+    assert(swarmSize - activeCount == 3, 'Test 8 failed: exactly 3 UAVs should have been removed');
     % Calling leave again on u1 should be safe no-op
     sim5.processLeaveRequest(u1.id, "leave");
     assert(swarm5.activeUAVs() == activeCount, 'Test 8 failed: duplicate leave changed active count');
