@@ -186,6 +186,12 @@ classdef Simulation < handle
             validateattributes(stabilityScore,{'numeric'},{'scalar','real','finite','nonnegative'});
             validateattributes(horizon,{'numeric'},{'scalar','real','finite','nonnegative'});
 
+            if isfield(obj.cfg,'dtPredictedDepartureProbability') && ...
+                    ~isempty(obj.cfg.dtPredictedDepartureProbability)
+                probability = max(0, min(1, double(obj.cfg.dtPredictedDepartureProbability)));
+                return;
+            end
+
             if ~isfield(obj.cfg,'dtDepartureHazardModel') || ...
                     string(obj.cfg.dtDepartureHazardModel) ~= "threshold_anchored_exponential"
                 error('Simulation:UnsupportedDTHazardModel','Unsupported DT departure hazard model.');
