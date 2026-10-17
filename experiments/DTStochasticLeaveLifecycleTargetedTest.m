@@ -101,6 +101,7 @@ function report = DTStochasticLeaveLifecycleTargetedTest()
     % ----------------------------------------------------
     fprintf('Test 5: Multiple predicted departures in one cluster...\n');
     cfg5 = cfg;
+    cfg5.dtPredictedDepartureProbability = 1.0;
     swarm5 = Swarm(cfg5);
     prot5 = DTHSBP(swarm5);
     sim5 = Simulation(cfg5, prot5);
@@ -110,6 +111,7 @@ function report = DTStochasticLeaveLifecycleTargetedTest()
     u1 = members1(2); u2 = members1(3); u3 = members1(4);
     sim5.eventQueue.schedule(DTDisturbanceEvent( ...
         sim5.currentTime + cfg5.timeStep, 1, [u1.id, u2.id], [10 0], [0 0], 0));
+    sim5.step();
     sim5.step();
     % Trigger leave on u3
     sim5.processLeaveRequest(u3.id, "leave");
@@ -123,6 +125,7 @@ function report = DTStochasticLeaveLifecycleTargetedTest()
     % ----------------------------------------------------
     fprintf('Test 6: Predicted departures in different clusters...\n');
     cfg6 = cfg;
+    cfg6.dtPredictedDepartureProbability = 1.0;
     swarm6 = Swarm(cfg6);
     prot6 = DTHSBP(swarm6);
     sim6 = Simulation(cfg6, prot6);
@@ -133,6 +136,7 @@ function report = DTStochasticLeaveLifecycleTargetedTest()
         sim6.currentTime + cfg6.timeStep, 1, uC1(2).id, [10 0], [0 0], 0));
     sim6.eventQueue.schedule(DTDisturbanceEvent( ...
         sim6.currentTime + cfg6.timeStep, 2, uC2(2).id, [10 0], [0 0], 0));
+    sim6.step();
     sim6.step();
     sim6.processLeaveRequest(uC1(3).id, "leave");
     sim6.processLeaveRequest(uC2(3).id, "leave");
