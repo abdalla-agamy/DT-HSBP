@@ -77,7 +77,7 @@ function result = runStochasticEventPerformance(protocolName, swarmSize, eventTy
                 observation = runJoinExperiment( ...
                     protocolName, swarmSize, clusterID, eventIndex, eventSeed);
             case "Leave"
-                observation = runLeaveExperiment( ...
+                observation = runStochasticLeaveEpisode( ...
                     protocolName, swarmSize, clusterID, eventIndex, eventSeed, ...
                     leavingUAVID, disturbedUAVIDs, [10 0]);
         end
@@ -94,8 +94,12 @@ function result = runStochasticEventPerformance(protocolName, swarmSize, eventTy
         totalBytes = totalBytes + observation.messageBytes;
         totalRekeys = totalRekeys + observation.rekeyCount;
 
-        if eventType == "Leave" && ~isempty(observation.predictedLeaves)
-            totalPredictedLeaves = totalPredictedLeaves + numel(observation.predictedLeaves);
+        if eventType == "Leave" && isfield(observation, 'predictedLeaves') && ~isempty(observation.predictedLeaves)
+            if isscalar(observation.predictedLeaves)
+                totalPredictedLeaves = totalPredictedLeaves + observation.predictedLeaves;
+            else
+                totalPredictedLeaves = totalPredictedLeaves + numel(observation.predictedLeaves);
+            end
         end
     end
 
