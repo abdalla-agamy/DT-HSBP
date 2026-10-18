@@ -1,11 +1,26 @@
 classdef DTHSBP < HSBP
+
+    properties
+        precomputationEngine
+    end
+
     methods
         function obj = DTHSBP(swarm)
             obj@HSBP(swarm);
+            obj.precomputationEngine = DTPrecomputationEngine(obj.cfg, swarm, obj.engine);
         end
 
         function initialize(obj)
             fprintf("DTHSBP initialized\n");
+        end
+
+        function pkg = precompute(obj, uavID)
+            pkg = obj.precomputationEngine.interceptPrediction(uavID);
+        end
+
+        function pkg = precomputeForCluster(obj, clusterID, departingIDs)
+            if nargin < 3, departingIDs = []; end
+            pkg = obj.precomputationEngine.precomputeForCluster(clusterID, departingIDs);
         end
 
         function result = join(obj,uavID,clusterID)
@@ -65,6 +80,10 @@ classdef DTHSBP < HSBP
             preSortedUAVs = cluster.getSortedActiveUAVs();
 
             predictedLeaves = obj.collectPredictedLeaves(cluster, uavID);
+            allDepartingIDs = unique([uavID, predictedLeaves]);
+
+            % Check precomputed key cache for zero-latency handover (Contribution B)
+            cachedPackage = cluster.getPrecomputedKey(allDepartingIDs);
 
             for i = 1:numel(predictedLeaves)
                 obj.swarm.removeUAV(predictedLeaves(i));
@@ -77,8 +96,19 @@ classdef DTHSBP < HSBP
 
             if ~isempty(activeUAVs)
                 leaderTimer = tic;
-                [newGroupKey, intermediateChain] = obj.engine.generateGroupKey(activeUAVs);
-                leaderTime = toc(leaderTimer);
+                if ~isempty(cachedPackage)
+                    newGroupKey = cachedPackage.groupKey;
+                    intermediateChain = cachedPackage.intermediateChain;
+                    blindKeys = cachedPackage.blindKeys;
+                    isPrecomputedHit = true;
+                    leaderTime = toc(leaderTimer); % Negligible cache retrieval time (~0)
+                    cluster.clearPrecomputedKey();
+                else
+                    [newGroupKey, intermediateChain] = obj.engine.generateGroupKey(activeUAVs);
+                    blindKeys = [];
+                    isPrecomputedHit = false;
+                    leaderTime = toc(leaderTimer);
+                end
 
                 cluster.groupKey = newGroupKey;
 
@@ -95,6 +125,8 @@ classdef DTHSBP < HSBP
                 result.predictedLeaves = predictedLeaves;
                 result.preSortedUAVs = preSortedUAVs;
                 result.intermediateChain = intermediateChain;
+                result.isPrecomputedHit = isPrecomputedHit;
+                result.blindKeys = blindKeys;
             else
                 cluster.groupKey = [];
                 result = [];
@@ -122,6 +154,10 @@ classdef DTHSBP < HSBP
             preSortedUAVs = cluster.getSortedActiveUAVs();
 
             predictedLeaves = obj.collectPredictedLeaves(cluster, uavID);
+            allDepartingIDs = unique([uavID, predictedLeaves]);
+
+            % Check precomputed key cache for zero-latency handover (Contribution B)
+            cachedPackage = cluster.getPrecomputedKey(allDepartingIDs);
 
             for i = 1:numel(predictedLeaves)
                 obj.swarm.removeUAV(predictedLeaves(i));
@@ -134,8 +170,19 @@ classdef DTHSBP < HSBP
 
             if ~isempty(activeUAVs)
                 leaderTimer = tic;
-                [newGroupKey, intermediateChain] = obj.engine.generateGroupKey(activeUAVs);
-                leaderTime = toc(leaderTimer);
+                if ~isempty(cachedPackage)
+                    newGroupKey = cachedPackage.groupKey;
+                    intermediateChain = cachedPackage.intermediateChain;
+                    blindKeys = cachedPackage.blindKeys;
+                    isPrecomputedHit = true;
+                    leaderTime = toc(leaderTimer);
+                    cluster.clearPrecomputedKey();
+                else
+                    [newGroupKey, intermediateChain] = obj.engine.generateGroupKey(activeUAVs);
+                    blindKeys = [];
+                    isPrecomputedHit = false;
+                    leaderTime = toc(leaderTimer);
+                end
 
                 cluster.groupKey = newGroupKey;
 
@@ -152,6 +199,8 @@ classdef DTHSBP < HSBP
                 result.predictedLeaves = predictedLeaves;
                 result.preSortedUAVs = preSortedUAVs;
                 result.intermediateChain = intermediateChain;
+                result.isPrecomputedHit = isPrecomputedHit;
+                result.blindKeys = blindKeys;
             else
                 cluster.groupKey = [];
                 result = [];

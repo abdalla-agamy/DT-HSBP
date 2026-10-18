@@ -44,6 +44,10 @@ classdef RekeyResult
         % DT-specific admission timing. Zero for non-DT protocols.
         dtAdmissionTime = 0
 
+        % Contribution B: Zero-latency precomputation flags & blind keys
+        isPrecomputedHit = false
+        blindKeys = []
+
     end
 
 end

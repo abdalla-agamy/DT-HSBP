@@ -43,6 +43,14 @@ classdef ExperimentResult < handle
         leaveThreshold = []
         rekeyTime = []
 
+        % Contribution B: Predictive pre-computation metrics
+        precomputationHitRate = 0
+        precomputationHits = 0
+        precomputationMisses = 0
+        leaderTimeReduction = 0
+        precomputedLeaderTime = 0
+        reactiveLeaderTime = 0
+
     end
 
     methods

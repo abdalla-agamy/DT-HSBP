@@ -10,6 +10,7 @@ classdef Simulation < handle
         dtDisturbanceGenerator
         dtManager
         statistics
+        precomputationEngine
         currentTime = 0
         dtDisturbanceCount = 0
         generatedJoinEvents = 0
@@ -32,6 +33,12 @@ classdef Simulation < handle
             obj.eventFactory = EventFactory(obj.swarm);
             obj.dtDisturbanceGenerator = DTDisturbanceGenerator(obj.cfg);
             obj.dtManager = DigitalTwinManager(obj.cfg);
+
+            if isa(obj.protocol, "DTHSBP") && isprop(obj.protocol, "precomputationEngine") && ~isempty(obj.protocol.precomputationEngine)
+                obj.precomputationEngine = obj.protocol.precomputationEngine;
+            else
+                obj.precomputationEngine = DTPrecomputationEngine(obj.cfg, obj.swarm, obj.protocol.engine);
+            end
 
             initialUAVs = obj.swarm.getActiveUAVs();
             for i = 1:numel(initialUAVs)
@@ -354,6 +361,11 @@ classdef Simulation < handle
                     obj.statistics.incrementDTPredictionsCreated();
                 end
             end
+
+            % Contribution B: Asynchronously pre-compute key packages for predicted departures
+            if isa(obj.protocol, "DTHSBP") && ~isempty(obj.precomputationEngine)
+                obj.precomputationEngine.interceptAllPredictions(obj.dtManager);
+            end
         end
 
         function printStatistics(obj)
@@ -368,6 +380,9 @@ classdef Simulation < handle
             fprintf('DT Realized        : %d\n',stats.dtPredictionsRealized);
             fprintf('DT Unrealized      : %d\n',stats.dtPredictionsUnrealized);
             fprintf('DT Realization     : %.6f\n',stats.dtRealizationRatio);
+            fprintf('Precomputation Hits: %d\n',stats.precomputationHits);
+            fprintf('Precomp Hit Rate   : %.2f%%\n',stats.precomputationHitRate * 100);
+            fprintf('Leader Reduction   : %.6f s\n',stats.leaderTimeReduction);
             fprintf('Predicted Leaves   : %d\n',stats.predictedLeaves);
             fprintf('DT Driven Leaves   : %d\n',obj.dtDrivenLeaveEvents);
             fprintf('DT Collateral      : %d\n',obj.dtCollateralDepartureEvents);

@@ -45,6 +45,16 @@ classdef StatisticsManager < handle
         totalHashOperations = 0
         totalRandomNumbers = 0
 
+        %-------------------------------
+        % Contribution B: Precomputation metrics
+        %-------------------------------
+        precomputationHits = 0
+        precomputationMisses = 0
+        precomputedLeaderTime = 0
+        reactiveLeaderTime = 0
+        precomputedLeaderTimeCount = 0
+        reactiveLeaderTimeCount = 0
+
     end
 
     methods
@@ -127,6 +137,19 @@ classdef StatisticsManager < handle
                 case "dtBatch"
                     obj.dtBatchMessages = obj.dtBatchMessages + result.messagesSent;
             end
+
+            % Contribution B: Record precomputation hit/miss and leader times
+            if isprop(result, 'isPrecomputedHit') || isfield(result, 'isPrecomputedHit')
+                if result.isPrecomputedHit
+                    obj.precomputationHits = obj.precomputationHits + 1;
+                    obj.precomputedLeaderTime = obj.precomputedLeaderTime + result.leaderTime;
+                    obj.precomputedLeaderTimeCount = obj.precomputedLeaderTimeCount + 1;
+                else
+                    obj.precomputationMisses = obj.precomputationMisses + 1;
+                    obj.reactiveLeaderTime = obj.reactiveLeaderTime + result.leaderTime;
+                    obj.reactiveLeaderTimeCount = obj.reactiveLeaderTimeCount + 1;
+                end
+            end
         end
 
         function n = getJoinEvents(obj), n = obj.joinEvents; end
@@ -177,6 +200,30 @@ classdef StatisticsManager < handle
             stats.totalDecryptions = obj.totalDecryptions;
             stats.totalHashOperations = obj.totalHashOperations;
             stats.totalRandomNumbers = obj.totalRandomNumbers;
+
+            % Contribution B: Zero-latency precomputation metrics
+            stats.precomputationHits = obj.precomputationHits;
+            stats.precomputationMisses = obj.precomputationMisses;
+            totalPrecomp = obj.precomputationHits + obj.precomputationMisses;
+            if totalPrecomp > 0
+                stats.precomputationHitRate = obj.precomputationHits / totalPrecomp;
+            else
+                stats.precomputationHitRate = 0;
+            end
+
+            if obj.reactiveLeaderTimeCount > 0
+                tReactiveAvg = obj.reactiveLeaderTime / obj.reactiveLeaderTimeCount;
+            else
+                tReactiveAvg = 0;
+            end
+            if obj.precomputedLeaderTimeCount > 0
+                tPrecomputedAvg = obj.precomputedLeaderTime / obj.precomputedLeaderTimeCount;
+            else
+                tPrecomputedAvg = 0;
+            end
+            stats.leaderTimeReduction = max(0, tReactiveAvg - tPrecomputedAvg);
+            stats.precomputedLeaderTime = tPrecomputedAvg;
+            stats.reactiveLeaderTime = tReactiveAvg;
         end
 
         function reset(obj)
@@ -208,6 +255,13 @@ classdef StatisticsManager < handle
             obj.totalDecryptions = 0;
             obj.totalHashOperations = 0;
             obj.totalRandomNumbers = 0;
+
+            obj.precomputationHits = 0;
+            obj.precomputationMisses = 0;
+            obj.precomputedLeaderTime = 0;
+            obj.reactiveLeaderTime = 0;
+            obj.precomputedLeaderTimeCount = 0;
+            obj.reactiveLeaderTimeCount = 0;
         end
 
     end

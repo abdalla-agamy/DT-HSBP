@@ -5,6 +5,7 @@ classdef Cluster < handle
         head            % Cluster Head (UAV object)
         uavs            % Array of UAV objects
         groupKey
+        precomputedKeyCache = []   % Cache for precomputed key packages (Contribution B)
     end
 
     methods
@@ -138,6 +139,40 @@ classdef Cluster < handle
 
             n = length(obj.uavs);
 
+        end
+
+        %----------------------------------------------
+
+        function setPrecomputedKey(obj, package)
+            obj.precomputedKeyCache = package;
+        end
+
+        %----------------------------------------------
+
+        function pkg = getPrecomputedKey(obj, departingIDs)
+            pkg = [];
+            if isempty(obj.precomputedKeyCache)
+                return;
+            end
+            if nargin < 2 || isempty(departingIDs)
+                pkg = obj.precomputedKeyCache;
+                return;
+            end
+            if isfield(obj.precomputedKeyCache, 'departingIDs')
+                cachedIDs = sort(obj.precomputedKeyCache.departingIDs);
+                queryIDs = sort(departingIDs);
+                if isequal(cachedIDs, queryIDs) || all(ismember(queryIDs, cachedIDs))
+                    pkg = obj.precomputedKeyCache;
+                end
+            else
+                pkg = obj.precomputedKeyCache;
+            end
+        end
+
+        %----------------------------------------------
+
+        function clearPrecomputedKey(obj)
+            obj.precomputedKeyCache = [];
         end
 
     end
