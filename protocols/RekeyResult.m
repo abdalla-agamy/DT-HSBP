@@ -11,6 +11,10 @@ classdef RekeyResult
 
         predictedLeaves
 
+        preSortedUAVs
+
+        intermediateChain
+
         %----------------------------------------------------------
         % Metrics
         %----------------------------------------------------------

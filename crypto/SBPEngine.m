@@ -18,9 +18,10 @@ classdef SBPEngine < handle
 
         %----------------------------------------
 
-        function key = generateGroupKey(obj,uavs)
+        function [key, intermediateChain] = generateGroupKey(obj,uavs)
 
             value = obj.g;
+            intermediateChain = zeros(1, length(uavs));
 
             for i = 1:length(uavs)
 
@@ -28,6 +29,7 @@ classdef SBPEngine < handle
                     value,...
                     uavs(i).privateKey,...
                     obj.p);
+                intermediateChain(i) = value;
 
             end
 

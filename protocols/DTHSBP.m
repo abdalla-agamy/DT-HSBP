@@ -23,10 +23,10 @@ classdef DTHSBP < HSBP
             if canJoin
                 obj.swarm.clusters(clusterID).addUAV(candidate);
                 cluster = obj.swarm.findCluster(clusterID);
-                activeUAVs = cluster.getActiveUAVs();
+                activeUAVs = cluster.getSortedActiveUAVs();
 
                 leaderTimer = tic;
-                newGroupKey = obj.engine.generateGroupKey(activeUAVs);
+                [newGroupKey, intermediateChain] = obj.engine.generateGroupKey(activeUAVs);
                 leaderTime = toc(leaderTimer);
                 cluster.groupKey = newGroupKey;
 
@@ -41,6 +41,7 @@ classdef DTHSBP < HSBP
                 result.leaderTime = leaderTime;
                 result.followerTime = followerTime;
                 result.dtAdmissionTime = dtAdmissionTime;
+                result.intermediateChain = intermediateChain;
 
                 obj.addCost(cluster.count());
                 obj.recordJoin();
@@ -57,18 +58,50 @@ classdef DTHSBP < HSBP
                 return;
             end
 
-            cluster = obj.swarm.findCluster(uav.clusterID);
+            clusterID = uav.clusterID;
+            cluster = obj.swarm.findCluster(clusterID);
+
+            % Capture pre-leave lifespan-sorted cluster state (tail contains leaving nodes)
+            preSortedUAVs = cluster.getSortedActiveUAVs();
+
             predictedLeaves = obj.collectPredictedLeaves(cluster, uavID);
 
             for i = 1:numel(predictedLeaves)
                 obj.swarm.removeUAV(predictedLeaves(i));
             end
 
-            result = leave@HSBP(obj,uavID);
+            obj.swarm.removeUAV(uavID);
 
-            if ~isempty(result)
+            % Obtain post-leave active UAVs sorted by lifespan
+            activeUAVs = cluster.getSortedActiveUAVs();
+
+            if ~isempty(activeUAVs)
+                leaderTimer = tic;
+                [newGroupKey, intermediateChain] = obj.engine.generateGroupKey(activeUAVs);
+                leaderTime = toc(leaderTimer);
+
+                cluster.groupKey = newGroupKey;
+
+                followerTimer = tic;
+                for i = 1:numel(activeUAVs)
+                    activeUAVs(i).groupKey = newGroupKey;
+                    activeUAVs(i).keySynced = true;
+                end
+                followerTime = toc(followerTimer);
+
+                result = obj.createRekeyResult(activeUAVs, clusterID);
+                result.leaderTime = leaderTime;
+                result.followerTime = followerTime;
                 result.predictedLeaves = predictedLeaves;
+                result.preSortedUAVs = preSortedUAVs;
+                result.intermediateChain = intermediateChain;
+            else
+                cluster.groupKey = [];
+                result = [];
             end
+
+            obj.addCost(cluster.count());
+            obj.recordLeave();
         end
 
         function result = failure(obj,uavID)
@@ -82,18 +115,85 @@ classdef DTHSBP < HSBP
                 fprintf("DT detected Failed UAV %d\n",uav.id);
             end
 
-            cluster = obj.swarm.findCluster(uav.clusterID);
+            clusterID = uav.clusterID;
+            cluster = obj.swarm.findCluster(clusterID);
+
+            % Capture pre-failure lifespan-sorted cluster state
+            preSortedUAVs = cluster.getSortedActiveUAVs();
+
             predictedLeaves = obj.collectPredictedLeaves(cluster, uavID);
 
             for i = 1:numel(predictedLeaves)
                 obj.swarm.removeUAV(predictedLeaves(i));
             end
 
-            result = failure@HSBP(obj,uavID);
+            obj.swarm.removeUAV(uavID);
 
-            if ~isempty(result)
+            % Post-failure active UAVs sorted by lifespan
+            activeUAVs = cluster.getSortedActiveUAVs();
+
+            if ~isempty(activeUAVs)
+                leaderTimer = tic;
+                [newGroupKey, intermediateChain] = obj.engine.generateGroupKey(activeUAVs);
+                leaderTime = toc(leaderTimer);
+
+                cluster.groupKey = newGroupKey;
+
+                followerTimer = tic;
+                for i = 1:numel(activeUAVs)
+                    activeUAVs(i).groupKey = newGroupKey;
+                    activeUAVs(i).keySynced = true;
+                end
+                followerTime = toc(followerTimer);
+
+                result = obj.createRekeyResult(activeUAVs, clusterID);
+                result.leaderTime = leaderTime;
+                result.followerTime = followerTime;
                 result.predictedLeaves = predictedLeaves;
+                result.preSortedUAVs = preSortedUAVs;
+                result.intermediateChain = intermediateChain;
+            else
+                cluster.groupKey = [];
+                result = [];
             end
+
+            obj.addCost(cluster.count());
+            obj.recordFailure();
+        end
+
+        function result = rekeyCluster(obj,clusterID)
+            cluster = obj.swarm.findCluster(clusterID);
+            if isempty(cluster)
+                result = [];
+                return;
+            end
+
+            activeUAVs = cluster.getSortedActiveUAVs();
+
+            if ~isempty(activeUAVs)
+                leaderTimer = tic;
+                [newGroupKey, intermediateChain] = obj.engine.generateGroupKey(activeUAVs);
+                leaderTime = toc(leaderTimer);
+
+                cluster.groupKey = newGroupKey;
+
+                followerTimer = tic;
+                for i = 1:numel(activeUAVs)
+                    activeUAVs(i).groupKey = newGroupKey;
+                    activeUAVs(i).keySynced = true;
+                end
+                followerTime = toc(followerTimer);
+
+                result = obj.createRekeyResult(activeUAVs, clusterID);
+                result.leaderTime = leaderTime;
+                result.followerTime = followerTime;
+                result.intermediateChain = intermediateChain;
+            else
+                cluster.groupKey = [];
+                result = [];
+            end
+
+            obj.addCost(cluster.count());
         end
     end
 

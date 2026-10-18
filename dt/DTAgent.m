@@ -7,6 +7,7 @@ classdef DTAgent < handle
 
         residual
         stabilityScore
+        estimatedLifespan = 0
 
         predictedLeave = false
         predictionTime = NaN
@@ -26,9 +27,19 @@ classdef DTAgent < handle
             obj.cfg = cfg;
             obj.residual = 0;
             obj.stabilityScore = 0;
+            obj.estimatedLifespan = 0;
         end
 
         function update(obj)
+
+            rate = 0.1;
+            if isfield(obj.cfg, 'energyConsumptionRate') && obj.cfg.energyConsumptionRate > 0
+                rate = obj.cfg.energyConsumptionRate;
+            end
+            if ~isempty(obj.uav)
+                obj.estimatedLifespan = obj.uav.energy / rate;
+                obj.uav.estimatedLifespan = obj.estimatedLifespan;
+            end
 
             if isempty(obj.predictedState)
                 obj.observe(obj.uav);
@@ -47,6 +58,9 @@ classdef DTAgent < handle
                 actual, obj.predictedState, obj.cfg);
 
             obj.stabilityScore = obj.residual;
+            if ~isempty(obj.uav)
+                obj.uav.stabilityScore = obj.stabilityScore;
+            end
             obj.state = actual;
 
             currentTime = obj.getCurrentTime();
@@ -74,6 +88,28 @@ classdef DTAgent < handle
             end
             obj.state = DTState(uav);
             obj.initialized = true;
+
+            rate = 0.1;
+            if isfield(obj.cfg, 'energyConsumptionRate') && obj.cfg.energyConsumptionRate > 0
+                rate = obj.cfg.energyConsumptionRate;
+            end
+            if ~isempty(obj.uav)
+                obj.estimatedLifespan = obj.uav.energy / rate;
+                obj.uav.estimatedLifespan = obj.estimatedLifespan;
+                obj.uav.stabilityScore = obj.stabilityScore;
+            end
+        end
+
+        function L = getEstimatedLifespan(obj)
+            rate = 0.1;
+            if isfield(obj.cfg, 'energyConsumptionRate') && obj.cfg.energyConsumptionRate > 0
+                rate = obj.cfg.energyConsumptionRate;
+            end
+            if ~isempty(obj.uav)
+                obj.estimatedLifespan = obj.uav.energy / rate;
+                obj.uav.estimatedLifespan = obj.estimatedLifespan;
+            end
+            L = obj.estimatedLifespan;
         end
 
         function stable = isStable(obj)

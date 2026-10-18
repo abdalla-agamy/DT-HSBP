@@ -87,6 +87,53 @@ classdef Cluster < handle
 
         %----------------------------------------------
 
+        function [sortedList, sortKeys] = getSortedActiveUAVs(obj, w1, w2)
+
+            list = obj.getActiveUAVs();
+
+            if isempty(list)
+                sortedList = UAV.empty;
+                sortKeys = [];
+                return;
+            end
+
+            if nargin < 2 || isempty(w1)
+                w1 = 1.0;
+                if ~isempty(list(1).dt) && isfield(list(1).dt.cfg, 'sortWeightEnergy')
+                    w1 = list(1).dt.cfg.sortWeightEnergy;
+                end
+            end
+
+            if nargin < 3 || isempty(w2)
+                w2 = 1.0;
+                if ~isempty(list(1).dt) && isfield(list(1).dt.cfg, 'sortWeightStability')
+                    w2 = list(1).dt.cfg.sortWeightStability;
+                end
+            end
+
+            n = numel(list);
+            sortKeys = zeros(1, n);
+
+            for i = 1:n
+                u = list(i);
+                e = u.energy;
+                s = u.stabilityScore;
+                if ~isempty(u.dt)
+                    s = u.dt.stabilityScore;
+                    u.stabilityScore = s;
+                end
+                sortKeys(i) = w1 * e - w2 * s;
+            end
+
+            % High battery and high stability come first (descending sort)
+            % Depleted / unstable nodes placed at tail (k -> nc)
+            [sortKeys, sortIdx] = sort(sortKeys, 'descend');
+            sortedList = list(sortIdx);
+
+        end
+
+        %----------------------------------------------
+
         function n = count(obj)
 
             n = length(obj.uavs);

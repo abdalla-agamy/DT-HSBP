@@ -96,6 +96,11 @@ cfg.residualWeights.energy = 1.0;
 cfg.residualWeights.linkQuality = 1.0;
 cfg.residualWeights.keySynced = 1.0;
 
+%% ===============================
+%  Lifespan-Aware Chain Sorting Weights
+% ================================
+cfg.sortWeightEnergy    = 1.0;   % w1: battery energy weight
+cfg.sortWeightStability = 1.0;   % w2: kinematic stability penalty weight
 
 cfg.randomSeed   = 42;
 

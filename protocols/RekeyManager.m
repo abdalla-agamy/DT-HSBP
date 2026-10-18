@@ -19,7 +19,11 @@ classdef RekeyManager < handle
         %----------------------------------------------------------
         function result = performLocalRekey(obj,cluster)
 
-            activeUAVs = cluster.getActiveUAVs();
+            if ismethod(cluster, 'getSortedActiveUAVs')
+                activeUAVs = cluster.getSortedActiveUAVs();
+            else
+                activeUAVs = cluster.getActiveUAVs();
+            end
 
             result = obj.buildResult( ...
                 activeUAVs, ...

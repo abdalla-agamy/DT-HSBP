@@ -18,6 +18,7 @@ classdef UAV < handle
         % DT State
         keySynced
         stabilityScore
+        estimatedLifespan   % L_i(t) = E_i(t) / energyConsumptionRate
 
         % Membership
         active
@@ -53,6 +54,12 @@ classdef UAV < handle
             obj.keySynced = true;
             obj.stabilityScore = 0;
 
+            rate = 0.1;
+            if nargin >= 3 && isfield(cfg, 'energyConsumptionRate') && cfg.energyConsumptionRate > 0
+                rate = cfg.energyConsumptionRate;
+            end
+            obj.estimatedLifespan = obj.energy / rate;
+
             obj.active = true;
 
             obj.dt = DTAgent(obj,cfg);
@@ -72,9 +79,53 @@ classdef UAV < handle
 
         %---------------------------------------------
 
-        function consumeEnergy(obj)
+        function consumeEnergy(obj, amount)
 
-            obj.energy = max(0,obj.energy-0.1);
+            rate = 0.1;
+            if ~isempty(obj.dt) && isfield(obj.dt.cfg, 'energyConsumptionRate') && obj.dt.cfg.energyConsumptionRate > 0
+                rate = obj.dt.cfg.energyConsumptionRate;
+            end
+
+            if nargin < 2 || isempty(amount)
+                amount = rate;
+            end
+
+            obj.energy = max(0, obj.energy - amount);
+            if rate > 0
+                obj.estimatedLifespan = obj.energy / rate;
+            end
+            if ~isempty(obj.dt)
+                obj.dt.estimatedLifespan = obj.estimatedLifespan;
+            end
+
+        end
+
+        %---------------------------------------------
+
+        function L = getEstimatedLifespan(obj, rate)
+
+            if nargin < 2 || isempty(rate)
+                rate = 0.1;
+                if ~isempty(obj.dt) && isfield(obj.dt.cfg, 'energyConsumptionRate') && obj.dt.cfg.energyConsumptionRate > 0
+                    rate = obj.dt.cfg.energyConsumptionRate;
+                end
+            end
+            if rate <= 0
+                rate = 0.1;
+            end
+            obj.estimatedLifespan = obj.energy / rate;
+            L = obj.estimatedLifespan;
+
+        end
+
+        %---------------------------------------------
+
+        function S = getStabilityScore(obj)
+
+            if ~isempty(obj.dt)
+                obj.stabilityScore = obj.dt.stabilityScore;
+            end
+            S = obj.stabilityScore;
 
         end
 
