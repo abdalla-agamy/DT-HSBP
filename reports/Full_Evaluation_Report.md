@@ -1,6 +1,6 @@
 # DT-HSBP & Proposed Contributions: Comprehensive Evaluation Report
 
-**Date:** 2026-10-18 19:54:30  
+**Date:** 2026-10-19 21:22:17  
 **Evaluation Scope:** Full Swarm Comparative Analysis (Baseline Flat-SBP, HSBP, DT-HSBP, Contribution A, Contribution B, and Full Proposed Architecture)
 
 ---
@@ -149,12 +149,24 @@ $$\mathcal{R}_{\text{latency}} = \frac{T_{\text{leader}}^{\text{reactive}} - \ta
 
 | Cluster Size ($n_c$) | Batch Size ($B$) | Unsorted Exponentiations | Lifespan-Sorted Exponentiations | Exponentiation Savings (%) | Unsorted Time (ms) | Sorted Time (ms) |
 |:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| 50 | 1 | 25 | **0** | **100.0%** | 26.0058 | **0.0437** |
-| 50 | 2 | 33 | **0** | **100.0%** | 3.2618 | **0.0149** |
-| 50 | 4 | 40 | **0** | **100.0%** | 3.6245 | **0.0019** |
-| 100 | 1 | 50 | **0** | **100.0%** | 2.7917 | **0.0009** |
-| 100 | 2 | 67 | **0** | **100.0%** | 1.2140 | **0.0004** |
-| 100 | 4 | 80 | **0** | **100.0%** | 2.2898 | **0.0005** |
+| 50 | 1 | 25 | **0** | **100.0%** | 8.8562 | **0.0243** |
+| 50 | 2 | 33 | **0** | **100.0%** | 2.5417 | **0.0004** |
+| 50 | 3 | 38 | **0** | **100.0%** | 0.2663 | **0.0003** |
+| 50 | 5 | 42 | **0** | **100.0%** | 0.3545 | **0.0003** |
+| 50 | 8 | 44 | **0** | **100.0%** | 0.6497 | **0.0009** |
+| 50 | 10 | 45 | **0** | **100.0%** | 0.3502 | **0.0011** |
+| 100 | 1 | 50 | **0** | **100.0%** | 0.7639 | **0.0011** |
+| 100 | 2 | 67 | **0** | **100.0%** | 0.5630 | **0.0003** |
+| 100 | 3 | 75 | **0** | **100.0%** | 0.6410 | **0.0006** |
+| 100 | 5 | 83 | **0** | **100.0%** | 0.7772 | **0.0010** |
+| 100 | 8 | 89 | **0** | **100.0%** | 0.7465 | **0.0012** |
+| 100 | 10 | 91 | **0** | **100.0%** | 0.7301 | **0.0009** |
+| 200 | 1 | 100 | **0** | **100.0%** | 1.5983 | **0.0011** |
+| 200 | 2 | 133 | **0** | **100.0%** | 1.5077 | **0.0011** |
+| 200 | 3 | 150 | **0** | **100.0%** | 1.4619 | **0.0010** |
+| 200 | 5 | 167 | **0** | **100.0%** | 1.5130 | **0.0011** |
+| 200 | 8 | 178 | **0** | **100.0%** | 1.5530 | **0.0012** |
+| 200 | 10 | 182 | **0** | **100.0%** | 1.4906 | **0.0010** |
 
 ![Improvement Due to Contribution A](Improvement_Contribution_A_Lifespan_Sorting.png)
 
@@ -164,11 +176,15 @@ $$\mathcal{R}_{\text{latency}} = \frac{T_{\text{leader}}^{\text{reactive}} - \ta
 
 | Cluster Size ($n_c$) | Reactive Leader Latency (ms) | Precomputed Leader Latency (ms) | Latency Reduction (ms) | Latency Reduction (%) |
 |:---:|:---:|:---:|:---:|:---:|
-| 30 | 0.9482 | **0.2330** | 0.7152 | **75.43%** |
-| 60 | 0.9021 | **0.0071** | 0.8950 | **99.22%** |
+| 25 | 0.4057 | **0.0060** | 0.3996 | **98.51%** |
+| 50 | 0.3453 | **0.0072** | 0.3381 | **97.91%** |
+| 75 | 0.4660 | **0.0067** | 0.4593 | **98.56%** |
+| 100 | 0.6240 | **0.0064** | 0.6176 | **98.97%** |
+| 150 | 0.8954 | **0.0077** | 0.8877 | **99.13%** |
+| 200 | 1.1402 | **0.0079** | 1.1324 | **99.31%** |
 
-- **Average Latency Reduction:** **87.32%** (exceeds the required >= 50% threshold)
-- **Speedup Factor:** **65.86x** faster leader handover.
+- **Average Latency Reduction:** **98.73%** (exceeds the required >= 50% threshold)
+- **Speedup Factor:** **90.35x** faster leader handover.
 
 ![Improvement Due to Contribution B](Improvement_Contribution_B_Zero_Latency.png)
 
