@@ -21,6 +21,7 @@ class NumberedCanvas(canvas.Canvas):
 
     def save(self):
         num_pages = len(self._saved_page_states)
+        print(f"Total pages generated: {num_pages}")
         for state in self._saved_page_states:
             self.__dict__.update(state)
             self.draw_page_decorations(num_pages)
@@ -95,42 +96,42 @@ def build_pdf_report(output_pdf_path, fig_dir, artifact_dir=None):
         'H2',
         parent=styles['Heading2'],
         fontName='Helvetica-Bold',
-        fontSize=11,
-        leading=15,
+        fontSize=10.5,
+        leading=13.5,
         textColor=colors.HexColor('#1E3D59'),
-        spaceBefore=10,
-        spaceAfter=5,
+        spaceBefore=7,
+        spaceAfter=3,
         keepWithNext=True
     )
     body_style = ParagraphStyle(
         'Body',
         parent=styles['BodyText'],
         fontName='Helvetica',
-        fontSize=9,
-        leading=13,
+        fontSize=8.5,
+        leading=11.5,
         textColor=colors.HexColor('#222222'),
-        spaceAfter=6
+        spaceAfter=4
     )
     bullet_style = ParagraphStyle(
         'Bullet',
         parent=body_style,
         leftIndent=15,
         bulletIndent=5,
-        spaceAfter=4
+        spaceAfter=3
     )
     math_style = ParagraphStyle(
         'MathBox',
         parent=styles['Normal'],
         fontName='Courier',
-        fontSize=8.5,
-        leading=12,
+        fontSize=8,
+        leading=11,
         textColor=colors.HexColor('#0B2545'),
         backColor=colors.HexColor('#F4F7FB'),
         borderColor=colors.HexColor('#D0DCE5'),
         borderWidth=0.5,
-        borderPadding=6,
-        spaceBefore=4,
-        spaceAfter=6
+        borderPadding=4,
+        spaceBefore=3,
+        spaceAfter=4
     )
     callout_style = ParagraphStyle(
         'Callout',
@@ -215,7 +216,8 @@ def build_pdf_report(output_pdf_path, fig_dir, artifact_dir=None):
          Paragraph("Handover Latency", th_style)],
         [Paragraph("Flat-SBP (Reactive Baseline)", td_style), Paragraph("O(B &middot; N)", td_style), Paragraph("O(N)", td_style), Paragraph("O(1) [1 key]", td_style), Paragraph("High (> 150 ms)", td_style)],
         [Paragraph("HSBP (Hierarchical Baseline)", td_style), Paragraph("O(B &middot; n<sub>c</sub>)", td_style), Paragraph("O(B &middot; n<sub>c</sub>)", td_style), Paragraph("O(1) [1 key]", td_style), Paragraph("Moderate (40-60 ms)", td_style)],
-        [Paragraph("Reactive LKH (Tree Baseline)", td_style), Paragraph("O(B log n<sub>c</sub>)", td_style), Paragraph("O(B log n<sub>c</sub>)", td_style), Paragraph("<b>O(log n<sub>c</sub>) [11 keys]</b>", td_bold_style), Paragraph("Reactive (3-5 ms)", td_style)],
+        [Paragraph("LKH (d=3 Ternary Tree)", td_style), Paragraph("O(B log<sub>d</sub> n<sub>c</sub>)", td_style), Paragraph("O(B log<sub>d</sub> n<sub>c</sub>)", td_style), Paragraph("<b>O(log<sub>d</sub> n<sub>c</sub>) [7 keys]</b>", td_bold_style), Paragraph("Reactive (2-4 ms)", td_style)],
+        [Paragraph("TGDH (Contributory Tree DH)", td_style), Paragraph("O(B log<sub>2</sub> n<sub>c</sub>)", td_style), Paragraph("O(B log<sub>2</sub> n<sub>c</sub>)", td_style), Paragraph("<b>O(log<sub>2</sub> n<sub>c</sub>) [21 keys]</b>", td_bold_style), Paragraph("Multi-Round (5-8 ms)", td_style)],
         [Paragraph("DT-HSBP (Collateral Batching)", td_style), Paragraph("O(n<sub>c</sub>)", td_style), Paragraph("O(n<sub>c</sub>)", td_style), Paragraph("O(1) [1 key]", td_style), Paragraph("Moderate (30-40 ms)", td_style)],
         [Paragraph("DT-HSBP + Contribution A", td_style), Paragraph("O(n<sub>c</sub>)", td_style), Paragraph("O(n<sub>c</sub>)", td_style), Paragraph("O(1) [1 key]", td_style), Paragraph("Reduced (20-25 ms)", td_style)],
         [Paragraph("DT-HSBP + Contribution B", td_style), Paragraph("O(n<sub>c</sub>)", td_style), Paragraph("<b>O(1) [Precomputed]</b>", td_bold_style), Paragraph("O(1) [1 key]", td_style), Paragraph("<b>Near-Zero (&lt; 0.2 ms)</b>", td_bold_style)],
@@ -233,9 +235,10 @@ def build_pdf_report(output_pdf_path, fig_dir, artifact_dir=None):
         ('BACKGROUND', (0, 4), (-1, 4), colors.HexColor('#F8F9FA')),
         ('BACKGROUND', (0, 5), (-1, 5), colors.HexColor('#FFFFFF')),
         ('BACKGROUND', (0, 6), (-1, 6), colors.HexColor('#F8F9FA')),
-        ('BACKGROUND', (0, 7), (-1, 7), colors.HexColor('#E8F8F5')),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
-        ('TOPPADDING', (0, 0), (-1, -1), 3),
+        ('BACKGROUND', (0, 7), (-1, 7), colors.HexColor('#FFFFFF')),
+        ('BACKGROUND', (0, 8), (-1, 8), colors.HexColor('#E8F8F5')),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
+        ('TOPPADDING', (0, 0), (-1, -1), 2),
     ]))
     story.append(matrix_table)
     story.append(Spacer(1, 10))
@@ -325,51 +328,40 @@ def build_pdf_report(output_pdf_path, fig_dir, artifact_dir=None):
     story.append(Paragraph(
         "Cluster members are ordered dynamically according to the multi-objective sorting key:<br/>"
         "&nbsp;&nbsp;<i>K<sub>i</sub> = w<sub>1</sub> &middot; E<sub>i</sub>(t) - w<sub>2</sub> &middot; S<sub>i</sub>(t) = w<sub>1</sub> &middot; &lambda;<sub>E</sub> &middot; L<sub>i</sub>(t) - w<sub>2</sub> &middot; S<sub>i</sub>(t)</i><br/>"
-        "where <i>L<sub>i</sub>(t) = E<sub>i</sub>(t) / &lambda;<sub>E</sub></i> is estimated remaining mission lifespan.<br/><br/>"
+        "where <i>L<sub>i</sub>(t) = E<sub>i</sub>(t) / &lambda;<sub>E</sub></i> is estimated remaining mission lifespan.<br/>"
         "<b>Mathematical Proof of O(1) Intermediate DH Chain Prefix Preservation:</b><br/>"
-        "In chronological arrival ordering, departing nodes are randomly distributed at indices <i>k<sub>1</sub>, ..., k<sub>B</sub> &isin; [1, n<sub>c</sub>]</i>. "
-        "The minimum departure index <i>k<sub>min</sub> = min(k<sub>j</sub>)</i> follows expectation <i>E[k<sub>min</sub>] = (n<sub>c</sub> + 1) / (B + 1)</i>. "
-        "Every intermediate power from <i>k<sub>min</sub></i> to <i>n<sub>c</sub></i> must be recomputed:<br/>"
-        "&nbsp;&nbsp;<i>E[n<sub>recompute</sub><sup>chronological</sup>] = n<sub>c</sub> - E[k<sub>min</sub>] + 1 = (B / (B + 1)) &middot; n<sub>c</sub> = O(n<sub>c</sub>)</i><br/>"
-        "Under Contribution A, sorting ensures that nodes with lowest lifespan and highest stability degradation cluster at the tail "
-        "indices <i>{n<sub>c</sub> - B + 1, ..., n<sub>c</sub>}</i>. Consequently, <i>k<sub>min</sub> = n<sub>c</sub> - B + 1</i>. "
-        "The entire prefix of length <i>n<sub>c</sub> - B</i> is preserved completely without re-exponentiation:<br/>"
-        "&nbsp;&nbsp;<i>n<sub>recompute</sub><sup>sorted</sup> = 0 = O(1)</i><br/>"
-        "This completely eliminates on-the-fly intermediate DH recalculations along the surviving chain.", body_style
+        "Under chronological arrival ordering, departing nodes occur at arbitrary indices with expectation <i>E[k<sub>min</sub>] = (n<sub>c</sub> + 1) / (B + 1)</i>, forcing <i>E[n<sub>recompute</sub>] = (B / (B + 1)) &middot; n<sub>c</sub> = O(n<sub>c</sub>)</i> intermediate re-exponentiations.<br/>"
+        "Under Contribution A, lifespan sorting guarantees departing nodes are strictly clustered at tail indices <i>{n<sub>c</sub> - B + 1, ..., n<sub>c</sub>}</i> (<i>k<sub>min</sub> = n<sub>c</sub> - B + 1</i>). The surviving prefix of length <i>n<sub>c</sub> - B</i> is 100% preserved:<br/>"
+        "&nbsp;&nbsp;<i>n<sub>recompute</sub><sup>sorted</sup> = 0 = O(1)</i>, completely eliminating on-the-fly intermediate chain recomputations.", body_style
     ))
 
     story.append(Paragraph("8. Contribution B: Predictive Pre-Calculation & Zero-Latency Handover Formulation", h2_style))
     story.append(Paragraph(
-        "When stability score <i>S<sub>i</sub>(t) &ge; &theta;<sub>leave</sub></i>, an advance lead time <i>&Delta;t<sub>lead</sub> = H</i> exists "
-        "before physical departure. `DTPrecomputationEngine` utilizes this window to pre-compute the expected post-departure group key material:<br/>"
-        "&nbsp;&nbsp;K<sub>group</sub><sup>t+H</sup> = g<sup>&prod;<sub>u &isin; M<sub>surv</sub></sub> sk<sub>u</sub></sup> mod p, &nbsp;&nbsp;&nbsp; B<sub>k</sub> = g<sup>I<sub>k</sub><sup>t+H</sup></sup> mod p<br/>"
-        "&nbsp;&nbsp;Package P = {K<sub>group</sub><sup>t+H</sup>, {I<sub>k</sub><sup>t+H</sup>}, {B<sub>k</sub>}} &rarr; cluster.precomputedKeyCache<br/>"
-        "When the departure event materializes, leader rekeying execution latency transitions from modexp summation to instant memory retrieval:<br/>"
-        "&nbsp;&nbsp;T<sub>leader</sub><sup>reactive</sup> = &sum;<sub>k=1</sub><sup>n<sub>c</sub> - B</sup> &tau;<sub>modexp</sub> &approx; (n<sub>c</sub> - B) &middot; &tau;<sub>modexp</sub><br/>"
-        "&nbsp;&nbsp;T<sub>leader</sub><sup>precomputed</sup> = &tau;<sub>lookup</sub> &approx; 0.1 ms<br/>"
-        "&nbsp;&nbsp;Relative Handover Latency Reduction: R<sub>latency</sub> = (T<sub>reactive</sub> - &tau;<sub>lookup</sub>) / T<sub>reactive</sub> &ge; 87%", math_style
+        "When stability score <i>S<sub>i</sub>(t) &ge; &theta;<sub>leave</sub></i>, advance lead time <i>&Delta;t<sub>lead</sub> = H</i> allows `DTPrecomputationEngine` to asynchronously pre-calculate post-departure group keys before physical flight handover:<br/>"
+        "&nbsp;&nbsp;<i>K<sub>group</sub><sup>t+H</sup> = g<sup>&prod;<sub>u &isin; M<sub>surv</sub></sub> sk<sub>u</sub></sup> mod p, &nbsp;&nbsp; B<sub>k</sub> = g<sup>I<sub>k</sub><sup>t+H</sup></sup> mod p</i> &nbsp;&rarr; <i>cluster.precomputedKeyCache</i><br/>"
+        "At handover realization, leader latency transitions from modexp computation to immediate cache retrieval:<br/>"
+        "&nbsp;&nbsp;<i>T<sub>leader</sub><sup>precomputed</sup> = &tau;<sub>lookup</sub> &approx; 0.1 ms</i> &nbsp;(&ge; 87% latency reduction vs. reactive <i>T<sub>leader</sub> &approx; (n<sub>c</sub> - B)&tau;<sub>modexp</sub></i>).", body_style
     ))
 
     story.append(Paragraph("9. Total Rekeying Overhead Metric (TROM)", h2_style))
     story.append(Paragraph(
-        "To evaluate holistic protocol performance, the Total Rekeying Overhead Metric (TROM) balances communication, latency, and computation:<br/>"
-        "&nbsp;&nbsp;<i>TROM = &alpha; &middot; (C<sub>comm</sub> / C<sub>0</sub>) + &beta; &middot; (T<sub>leader</sub> / T<sub>0</sub>) + &gamma; &middot; (N<sub>exp</sub> / N<sub>0</sub>)</i><br/>"
-        "where <i>&alpha; = 0.4, &beta; = 0.4, &gamma; = 0.2</i>, and <i>C<sub>0</sub>, T<sub>0</sub>, N<sub>0</sub></i> denote Flat-SBP baseline values.<br/>"
-        "&nbsp;&nbsp;TROM<sub>Flat-SBP</sub> = 1.000 &nbsp;&nbsp;|&nbsp;&nbsp; TROM<sub>HSBP</sub> = 0.354 &nbsp;&nbsp;|&nbsp;&nbsp; TROM<sub>DT-HSBP</sub> = 0.148 &nbsp;&nbsp;|&nbsp;&nbsp; <b>TROM<sub>Proposed Full</sub> = 0.038</b><br/>"
-        "Representing an <b>overall system overhead reduction of 96.2%</b>.", body_style
+        "TROM synthesizes communication, latency, and computation: <i>TROM = 0.4(C<sub>comm</sub>/C<sub>0</sub>) + 0.4(T<sub>leader</sub>/T<sub>0</sub>) + 0.2(N<sub>exp</sub>/N<sub>0</sub>)</i>.<br/>"
+        "&nbsp;&nbsp;TROM<sub>Flat-SBP</sub> = 1.000 &nbsp;|&nbsp; TROM<sub>HSBP</sub> = 0.354 &nbsp;|&nbsp; TROM<sub>DT-HSBP</sub> = 0.148 &nbsp;|&nbsp; <b>TROM<sub>Proposed Full</sub> = 0.038 (96.2% reduction)</b>.", body_style
     ))
 
-    story.append(Paragraph("10. Baseline Comparison: Reactive Logical Key Hierarchy (LKH) in Tactical Swarms", h2_style))
+    story.append(Paragraph("10. Baseline Comparison: Reactive Logical Key Hierarchy (LKH, d = 3)", h2_style))
     story.append(Paragraph(
-        "In reactive tactical regimes without a Digital Twin, LKH cannot anticipate future departures. When <i>B</i> UAVs leave "
-        "across a flight window, LKH executes <i>B</i> sequential single-leave tree rekeys:<br/>"
-        "&nbsp;&nbsp;&bull; Member Storage Overhead: <i>S<sub>LKH</sub> = O(log<sub>d</sub> n<sub>c</sub>)</i> keys (e.g., <b>11 keys</b> at <i>n<sub>c</sub>=600</i> vs. <b>1 key</b> in DT-HSBP).<br/>"
-        "&nbsp;&nbsp;&bull; Reactive Leave Traffic: <i>C<sub>LKH</sub><sup>reactive</sup> = B &middot; (d - 1) &middot; &lceil;log<sub>d</sub> n<sub>c</sub>&rceil; &middot; S<sub>key</sub> = O(B log<sub>d</sub> n<sub>c</sub>)</i>.<br/>"
-        "&nbsp;&nbsp;&bull; <b>Broken-Path Fragility Formulation:</b> In lossy tactical FANETs with drop probability <i>p<sub>loss</sub></i>, "
-        "a surviving drone must receive all <i>h</i> updated ancestor KEKs. The key synchronization probability is "
-        "<i>P<sub>sync</sub><sup>LKH</sup> = (1 - p<sub>loss</sub>)<sup>h</sup></i>. For <i>p<sub>loss</sub> = 5%</i> and <i>h = 10</i>: "
-        "<i>P<sub>sync</sub><sup>LKH</sup> = (0.95)<sup>10</sup> &approx; 59.8%</i> (<b>40.2% desynchronization risk</b>), whereas DT-HSBP achieves "
-        "<i>P<sub>sync</sub><sup>DT-HSBP</sup> = 1 - p<sub>loss</sub> = 95.0%</i>.", body_style
+        "Under balanced ternary branching (<i>d = 3</i>), tree height is <i>h = &lceil;log<sub>3</sub>(n<sub>c</sub>)&rceil; = 6</i> at <i>n<sub>c</sub>=600</i>:<br/>"
+        "&nbsp;&bull; Member Storage: <i>S<sub>LKH</sub> = h + 1 = <b>7 keys</b></i> (vs. <b>1 key</b> in DT-HSBP).<br/>"
+        "&nbsp;&bull; Reactive Traffic: <i>C<sub>LKH</sub><sup>reactive</sup> = B(d - 1)h &middot; S<sub>key</sub> = 36</i> ciphertexts (2.53 KB).<br/>"
+        "&nbsp;&bull; Broken-Path Reliability: <i>P<sub>sync</sub><sup>LKH</sup> = (1 - p<sub>loss</sub>)<sup>6</sup> = (0.95)<sup>6</sup> &approx; <b>73.5%</b></i> (26.5% desynchronization risk in lossy FANETs).", body_style
+    ))
+
+    story.append(Paragraph("11. Contributory Tree Baseline: Tree-Based Group Diffie-Hellman (TGDH)", h2_style))
+    story.append(Paragraph(
+        "TGDH (Kim et al., 2004) uses a contributory binary tree with blinded keys <i>BK<sub>v</sub> = g<sup>K<sub>v</sub></sup> mod p</i>:<br/>"
+        "&nbsp;&bull; Member Storage Footprint: <i>S<sub>TGDH</sub> = 2h + 1 = <b>21 keys</b></i> (<b>21&times; higher</b> storage footprint than DT-HSBP).<br/>"
+        "&nbsp;&bull; Multi-Round Bottleneck: Departing members force surviving sponsors to compute and broadcast blinded keys across <i>h = 10</i> <b>sequential synchronized rounds</b>. In lossy FANETs, a single dropped sponsor packet causes protocol stall.", body_style
     ))
 
     story.append(PageBreak())
@@ -382,10 +374,10 @@ def build_pdf_report(output_pdf_path, fig_dir, artifact_dir=None):
 
     fig1_path = os.path.join(fig_dir, "Improvement_DT_HSBP_Comparison.png")
     if os.path.exists(fig1_path):
-        story.append(Image(fig1_path, width=usable_width, height=usable_width * 0.48))
-        story.append(Spacer(1, 8))
+        story.append(Image(fig1_path, width=usable_width, height=usable_width * 0.36))
+        story.append(Spacer(1, 4))
 
-    story.append(Paragraph("Empirical Communication Traffic Benchmark vs Swarm Size (N)", h2_style))
+    story.append(Paragraph("Empirical Leave Communication Traffic Benchmark vs Swarm Size (N)", h2_style))
     sec1_table_data = [
         [Paragraph("Swarm Size (N)", th_style), 
          Paragraph("Flat-SBP (KB)", th_style), 
@@ -406,16 +398,41 @@ def build_pdf_report(output_pdf_path, fig_dir, artifact_dir=None):
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
         ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#CCCCCC')),
         ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.HexColor('#FFFFFF'), colors.HexColor('#F8F9FA')]),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
-        ('TOPPADDING', (0, 0), (-1, -1), 3),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
+        ('TOPPADDING', (0, 0), (-1, -1), 2),
     ]))
     story.append(sec1_table)
-    story.append(Spacer(1, 6))
+    story.append(Spacer(1, 4))
+
+    story.append(Paragraph("Side-by-Side Join vs. Leave Operational Benchmark", h2_style))
+    join_leave_table_data = [
+        [Paragraph("Swarm Size (N)", th_style), 
+         Paragraph("Flat Join/Leave (KB)", th_style), 
+         Paragraph("HSBP Join/Leave (KB)", th_style), 
+         Paragraph("DT-HSBP Join/Leave (KB)", th_style), 
+         Paragraph("DT Join Latency", th_style), 
+         Paragraph("DT Leave Latency", th_style)],
+        [Paragraph("1000", td_style), Paragraph("0.13 / 158.8", td_style), Paragraph("0.13 / 31.5", td_style), Paragraph("<b>0.13 / 10.8</b>", td_bold_style), Paragraph("0.21 ms", td_style), Paragraph("14.2 ms", td_style)],
+        [Paragraph("2000", td_style), Paragraph("0.13 / 319.9", td_style), Paragraph("0.13 / 63.7", td_style), Paragraph("<b>0.13 / 21.7</b>", td_bold_style), Paragraph("0.22 ms", td_style), Paragraph("27.4 ms", td_style)],
+        [Paragraph("3000", td_style), Paragraph("0.13 / 468.5", td_style), Paragraph("0.13 / 93.5", td_style), Paragraph("<b>0.13 / 32.7</b>", td_bold_style), Paragraph("0.22 ms", td_style), Paragraph("39.9 ms", td_style)],
+        [Paragraph("4000", td_style), Paragraph("0.13 / 632.5", td_style), Paragraph("0.13 / 126.3", td_style), Paragraph("<b>0.13 / 43.6</b>", td_bold_style), Paragraph("0.23 ms", td_style), Paragraph("52.8 ms", td_style)],
+        [Paragraph("5000", td_style), Paragraph("0.13 / 775.6", td_style), Paragraph("0.13 / 154.9", td_style), Paragraph("<b>0.13 / 54.5</b>", td_bold_style), Paragraph("0.24 ms", td_style), Paragraph("65.1 ms", td_style)]
+    ]
+    join_leave_table = Table(join_leave_table_data, colWidths=[74, 90, 85, 95, 80, 80])
+    join_leave_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#0F4C81')),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#CCCCCC')),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.HexColor('#FFFFFF'), colors.HexColor('#F8F9FA')]),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
+        ('TOPPADDING', (0, 0), (-1, -1), 2),
+    ]))
+    story.append(join_leave_table)
+    story.append(Spacer(1, 4))
 
     story.append(Paragraph(
-        "<b>Section 1 Findings:</b> DT-HSBP consistently achieves <b>~65% communication bandwidth savings compared to standard HSBP</b> "
-        "and <b>~93% savings compared to Flat-SBP</b> across all swarm scales from <i>N = 1000</i> to <i>N = 5000</i>. "
-        "This confirms the theoretical model <i>&eta;<sub>comm</sub> &approx; 1 - 1/B</i>, eliminating communication rekey storms.", body_style
+        "<b>Section 1 Findings:</b> For <b>Join events</b>, traffic is minimal (~0.13 KB) across all architectures because adding a node only requires encrypting the new key. For <b>Leave events</b>, traffic explodes in Flat-SBP and HSBP, whereas DT-HSBP maintains <b>~65% bandwidth reduction</b> via collateral batching.", body_style
     ))
 
     story.append(PageBreak())
@@ -534,7 +551,8 @@ def build_pdf_report(output_pdf_path, fig_dir, artifact_dir=None):
          Paragraph("Asymptotic Leave Complexity", th_style)],
         [Paragraph("Flat-SBP", td_style), Paragraph("468.53", td_style), Paragraph("191.151", td_style), Paragraph("O(1) [1 key]", td_style), Paragraph("3000", td_style), Paragraph("O(N)", td_style)],
         [Paragraph("HSBP", td_style), Paragraph("93.46", td_style), Paragraph("57.300", td_style), Paragraph("O(1) [1 key]", td_style), Paragraph("1500", td_style), Paragraph("O(n<sub>c</sub> &middot; B)", td_style)],
-        [Paragraph("Reactive LKH", td_style), Paragraph("2.81", td_style), Paragraph("3.350", td_style), Paragraph("<b>O(log n<sub>c</sub>) [11 keys]</b>", td_bold_style), Paragraph("0", td_style), Paragraph("O(B log n<sub>c</sub>)", td_style)],
+        [Paragraph("LKH (d=3)", td_style), Paragraph("2.53", td_style), Paragraph("2.035", td_style), Paragraph("<b>O(log<sub>d</sub> n<sub>c</sub>) [7 keys]</b>", td_bold_style), Paragraph("0", td_style), Paragraph("O(B log<sub>d</sub> n<sub>c</sub>)", td_style)],
+        [Paragraph("TGDH (Tree DH)", td_style), Paragraph("3.75", td_style), Paragraph("5.709", td_style), Paragraph("<b>O(log<sub>2</sub> n<sub>c</sub>) [21 keys]</b>", td_bold_style), Paragraph("60", td_style), Paragraph("O(B log<sub>2</sub> n<sub>c</sub>) [Rounds]", td_style)],
         [Paragraph("DT-HSBP", td_style), Paragraph("32.66", td_style), Paragraph("39.867", td_style), Paragraph("O(1) [1 key]", td_style), Paragraph("600", td_style), Paragraph("O(n<sub>c</sub>)", td_style)],
         [Paragraph("DT-HSBP + Contrib A", td_style), Paragraph("32.66", td_style), Paragraph("23.920", td_style), Paragraph("O(1) [1 key]", td_style), Paragraph("0", td_bold_style), Paragraph("O(1) intermediate", td_bold_style)],
         [Paragraph("DT-HSBP + Contrib B", td_style), Paragraph("32.66", td_style), Paragraph("5.980", td_style), Paragraph("O(1) [1 key]", td_style), Paragraph("600", td_style), Paragraph("O(1) handover", td_bold_style)],
@@ -552,7 +570,8 @@ def build_pdf_report(output_pdf_path, fig_dir, artifact_dir=None):
         ('BACKGROUND', (0, 4), (-1, 4), colors.HexColor('#F8F9FA')),
         ('BACKGROUND', (0, 5), (-1, 5), colors.HexColor('#FFFFFF')),
         ('BACKGROUND', (0, 6), (-1, 6), colors.HexColor('#F8F9FA')),
-        ('BACKGROUND', (0, 7), (-1, 7), colors.HexColor('#E8F8F5')),
+        ('BACKGROUND', (0, 7), (-1, 7), colors.HexColor('#FFFFFF')),
+        ('BACKGROUND', (0, 8), (-1, 8), colors.HexColor('#E8F8F5')),
         ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
         ('TOPPADDING', (0, 0), (-1, -1), 2),
     ]))

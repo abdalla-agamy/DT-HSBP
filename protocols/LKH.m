@@ -10,7 +10,7 @@ classdef LKH < Protocol
     % Batch leave communication overhead = O(B * log_d(n_c / B)) encrypted keys.
 
     properties
-        treeDegree = 2;          % Binary tree by default (d = 2)
+        treeDegree = 3;          % Ternary tree by default (d = 3)
         keySizeBytes = 32;       % 256-bit symmetric key (AES-256)
         clusterTrees             % Map of clusterID -> Tree structure
     end

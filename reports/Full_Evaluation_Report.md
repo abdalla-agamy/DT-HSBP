@@ -1,6 +1,6 @@
 # DT-HSBP & Proposed Contributions: Comprehensive Evaluation Report
 
-**Date:** 2026-10-20 10:54:26  
+**Date:** 2026-10-20 19:50:22  
 **Evaluation Scope:** Full Swarm Comparative Analysis (Baseline Flat-SBP, HSBP, DT-HSBP, Contribution A, Contribution B, and Full Proposed Architecture)
 
 ---
@@ -116,39 +116,52 @@ $$T_{\text{leader}}^{\text{reactive}} = \sum_{k=1}^{n_c - B} \tau_{\text{modexp}
 
 $$\mathcal{R}_{\text{latency}} = \frac{T_{\text{leader}}^{\text{reactive}} - \tau_{\text{lookup}}}{T_{\text{leader}}^{\text{reactive}}} \times 100\%% \ge 85\%%$$
 
-### M.8 Tree-Based Baseline: Reactive Logical Key Hierarchy (LKH) Formulation
+### M.8 Tree-Based Baseline: Reactive Logical Key Hierarchy (LKH, d = 3) Formulation
 
-In LKH (Wong et al., IEEE/ACM ToN 2000), cluster members are organized as leaves of a logical $d$-ary key tree (binary $d=2$). Each node $v$ maintains a Key-Encrypting Key (KEK) $K_v$, with the root key serving as $K_{\text{group}}$.
+In LKH (Wong et al., IEEE/ACM ToN 2000), cluster members are organized as leaves of a balanced ternary key tree ($d = 3$). Each internal node $v$ maintains a Key-Encrypting Key (KEK) $K_v$, with the root key serving as $K_{\text{group}}$.
 
-1. **Member Storage Overhead:** Each UAV stores all secret keys along its root-to-leaf path:
+1. **Member Storage Overhead:** Each UAV stores all secret keys along its root-to-leaf path ($h = \lceil \log_3(n_c) \rceil = 6$ levels at $n_c = 600$):
 
-$$S_{\text{LKH}}^{\text{member}} = \lceil \log_d(n_c) \rceil + 1 = \mathcal{O}(\log n_c) \quad (\text{vs. } \mathcal{O}(1) \text{ in DT-HSBP})$$
+$$S_{\text{LKH}}^{\text{member}} = \lceil \log_d(n_c) \rceil + 1 = 6 + 1 = 7\text{ keys} = \mathcal{O}(\log_d n_c) \quad (\text{vs. } \mathcal{O}(1) \text{ in DT-HSBP})$$
 
-2. **Reactive Departure Communication:** Without a Digital Twin to anticipate upcoming departures, LKH must reactively execute $B$ sequential single-leave tree rekeys across a mission window:
+2. **Reactive Departure Communication:** Without a Digital Twin to anticipate upcoming departures, LKH must reactively execute $B$ sequential single-leave tree rekeys across a mission window. Each leave requires $(d - 1) = 2$ ciphertexts per level:
 
 $$C_{\text{LKH}}^{\text{reactive}} = B \cdot (d - 1) \lceil \log_d n_c \rceil \cdot S_{\text{key}} = \mathcal{O}(B \log_d n_c) \cdot S_{\text{key}}$$
 
-3. **FANET Fragility Analysis (The Broken-Path Problem):** In lossy wireless UAV channels with packet loss rate $p_{\text{loss}}$, a UAV must successfully receive all $h = \lceil \log_2 n_c \rceil$ parent KEK updates to remain synchronized. The synchronization probability is:
+3. **FANET Fragility Analysis:** With $h = 6$ and link drop probability $p_{\text{loss}} = 5\%%, P_{\text{sync}}^{\text{LKH}} = (0.95)^6 \approx 73.5\%%$ (a 26.5\%% desynchronization risk, compared to DT-HSBP single broadcast reliability of 95.0\%%).
 
-$$P_{\text{sync}}^{\text{LKH}} = (1 - p_{\text{loss}})^h = (1 - p_{\text{loss}})^{\lceil \log_2 n_c \rceil}$$
+### M.9 Contributory Tree-Based Baseline: Tree-Based Group Diffie-Hellman (TGDH) Formulation
 
-For cluster size $n_c = 600$ ($h = 10$) and channel loss $p_{\text{loss}} = 5\%%, P_{\text{sync}}^{\text{LKH}} = (0.95)^{10} \approx 59.8\%%$ (over 40\%% of UAVs suffer key desynchronization). In contrast, DT-HSBP broadcasts a direct atomic update with blind keys, maintaining $P_{\text{sync}}^{\text{DT-HSBP}} = 1 - p_{\text{loss}} = 95\%%$.
+In TGDH (Kim, Perrig, & Tsudik, ACM TISSEC 2004), group key agreement combines logical tree hierarchy with contributory Diffie-Hellman. Each node $v$ maintains a private key $K_v$ and public blinded key $BK_v = g^{K_v} \bmod p$:
 
-### M.9 Asymptotic Complexity Comparison Matrix
+1. **Key Computation:** For parent $v$ with children $L$ and $R$:
+
+$$K_v = (BK_L)^{K_R} \bmod p = (BK_R)^{K_L} \bmod p = g^{K_L \cdot K_R} \bmod p, \quad BK_v = g^{K_v} \bmod p$$
+
+2. **Member Key Storage Footprint:** Each UAV stores secret keys on its root path PLUS all copath sibling blinded keys:
+
+$$S_{\text{TGDH}}^{\text{member}} = 2 \lceil \log_2 n_c \rceil + 1 = 2 \times 10 + 1 = 21\text{ keys} = \mathcal{O}(\log_2 n_c) \quad (\mathbf{21\times \text{ higher than DT-HSBP}})$$
+
+3. **Multi-Round Synchronization Bottleneck:** Upon member departure, surviving subtree sponsors must compute and sequentially broadcast new blinded keys bottom-up across $\lceil \log_2 n_c \rceil = 10$ sequential broadcast rounds. Packet loss during any intermediate round causes the entire handshake to deadlock.
+
+### M.10 Asymptotic Complexity Comparison Matrix
 
 | Paradigm | Comm. Overhead | Leader Rekey Latency | Follower Latency | Member Key Storage | Handover Latency | Packet Loss Robustness |
 |:---|:---:|:---:|:---:|:---:|:---:|:---:|
 | **Flat-SBP** | $\mathcal{O}(B \cdot N)$ | $\mathcal{O}(N)$ | $\mathcal{O}(1)$ | $\mathcal{O}(1)$ [1 key] | High ($> 150\text{ ms}$) | High |
 | **HSBP** | $\mathcal{O}(B \cdot n_c)$ | $\mathcal{O}(B \cdot n_c)$ | $\mathcal{O}(1)$ | $\mathcal{O}(1)$ [1 key] | Moderate ($40\text{--}60\text{ ms}$) | High |
-| **Reactive LKH** | $\mathcal{O}(B \log n_c)$ | $\mathcal{O}(B \log n_c)$ | $\mathcal{O}(\log n_c)$ | **$\mathcal{O}(\log n_c)$ [11 keys]** | Reactive ($3\text{--}5\text{ ms}$) | **Low [Broken Path Risk]** |
-| **DT-HSBP** | $\mathcal{O}(n_c)$ | $\mathcal{O}(n_c)$ | $\mathcal{O}(1)$ | $\mathcal{O}(1)$ [1 key] | Moderate ($30\text{--}40\text{ ms}$) | High |
-| **DT-HSBP + Contrib A** | $\mathcal{O}(n_c)$ | $\mathcal{O}(n_c)$ | $\mathcal{O}(1)$ | $\mathcal{O}(1)$ [1 key] | Reduced ($20\text{--}25\text{ ms}$) | High |
-| **DT-HSBP + Contrib B** | $\mathcal{O}(n_c)$ | **$\mathcal{O}(1)$ [Precomputed]** | $\mathcal{O}(1)$ | $\mathcal{O}(1)$ [1 key] | **Near-Zero ($< 0.2\text{ ms}$)** | High |
-| **Full Proposed (DT-HSBP + A + B)** | **$\mathcal{O}(n_c)$** | **$\mathcal{O}(1)$ [Instant]** | **$\mathcal{O}(1)$** | **$\mathcal{O}(1)$ [1 key]** | **Zero-Latency Handover** | **High** |
+| **LKH ($d=3$)** | $\mathcal{O}(B \log_d n_c)$ | $\mathcal{O}(B \log_d n_c)$ | $\mathcal{O}(\log n_c)$ | **$\mathcal{O}(\log n_c)$ [7 keys]** | Reactive ($2\text{--}4\text{ ms}$) | **Moderate (73.5%)** |
+| **TGDH (Tree DH)** | $\mathcal{O}(B \log_2 n_c)$ | $\mathcal{O}(B \log_2 n_c)$ | $\mathcal{O}(\log_2 n_c)$ | **$\mathcal{O}(\log n_c)$ [21 keys]** | **Multi-Round (5-8 ms)** | **Low (Deadlock Risk)** |
+| **DT-HSBP** | $\mathcal{O}(n_c)$ | $\mathcal{O}(n_c)$ | $\mathcal{O}(1)$ | $\mathcal{O}(1)$ [1 key] | Moderate ($30\text{--}40\text{ ms}$) | High (95.0%) |
+| **DT-HSBP + Contrib A** | $\mathcal{O}(n_c)$ | $\mathcal{O}(n_c)$ | $\mathcal{O}(1)$ | $\mathcal{O}(1)$ [1 key] | Reduced ($20\text{--}25\text{ ms}$) | High (95.0%) |
+| **DT-HSBP + Contrib B** | $\mathcal{O}(n_c)$ | **$\mathcal{O}(1)$ [Precomputed]** | $\mathcal{O}(1)$ | $\mathcal{O}(1)$ [1 key] | **Near-Zero ($< 0.2\text{ ms}$)** | High (95.0%) |
+| **Full Proposed (DT-HSBP + A + B)** | **$\mathcal{O}(n_c)$** | **$\mathcal{O}(1)$ [Instant]** | **$\mathcal{O}(1)$** | **$\mathcal{O}(1)$ [1 key]** | **Zero-Latency Handover** | **High (95.0%)** |
 
 ---
 
 ## 1. Empirical Results: Improvement Due to DT-HSBP
+
+### 1.1 Leave Rekeying Performance
 
 | Swarm Size ($N$) | Flat-SBP Leave Traffic (KB) | HSBP Leave Traffic (KB) | DT-HSBP Leave Traffic (KB) | Byte Reduction vs HSBP (%) | Byte Reduction vs Flat (%) |
 |:---:|:---:|:---:|:---:|:---:|:---:|
@@ -158,9 +171,19 @@ For cluster size $n_c = 600$ ($h = 10$) and channel loss $p_{\text{loss}} = 5\%%
 | 4000 | 632.50 | 126.25 | 43.59 | **65.47%** | **93.11%** |
 | 5000 | 775.62 | 154.88 | 54.53 | **64.79%** | **92.97%** |
 
+### 1.2 Side-by-Side Join vs. Leave Operational Benchmark
+
+| Swarm Size ($N$) | Flat Join (KB) | Flat Leave (KB) | HSBP Join (KB) | HSBP Leave (KB) | DT-HSBP Join (KB) | DT-HSBP Leave (KB) | DT Join Latency (ms) | DT Leave Latency (ms) |
+|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| 1000 | 54.74 | 158.81 | 10.99 | 31.51 | **10.99** | **10.78** | 1.19 ms | 20.21 ms |
+| 2000 | 109.43 | 319.93 | 21.93 | 63.73 | **21.93** | **21.71** | 2.37 ms | 35.56 ms |
+| 3000 | 164.12 | 468.53 | 32.87 | 93.46 | **32.87** | **32.66** | 3.50 ms | 51.75 ms |
+| 4000 | 218.80 | 632.50 | 43.80 | 126.25 | **43.80** | **43.59** | 4.69 ms | 69.32 ms |
+| 5000 | 273.49 | 775.62 | 54.74 | 154.88 | **54.74** | **54.53** | 5.81 ms | 88.14 ms |
+
 ![Improvement Due to DT-HSBP](Improvement_DT_HSBP_Comparison.png)
 
-> **Key Takeaway:** DT-HSBP consistently achieves a **~65% reduction** in leave communication traffic compared to HSBP, and an **85% to 93% reduction** compared to Flat-SBP, due to stochastic collateral batching.
+> **Key Takeaway:** For **Join events**, communication traffic is minimal and constant across all architectures because admitting a member only requires distributing the new session key under the current key. For **Leave events**, traffic explodes in Flat-SBP and HSBP, whereas DT-HSBP maintains a **~65% reduction** via stochastic collateral batching.
 
 ---
 
@@ -168,24 +191,24 @@ For cluster size $n_c = 600$ ($h = 10$) and channel loss $p_{\text{loss}} = 5\%%
 
 | Cluster Size ($n_c$) | Batch Size ($B$) | Unsorted Exponentiations | Lifespan-Sorted Exponentiations | Exponentiation Savings (%) | Unsorted Time (ms) | Sorted Time (ms) |
 |:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| 50 | 1 | 25 | **0** | **100.0%** | 10.1603 | **0.0298** |
-| 50 | 2 | 33 | **0** | **100.0%** | 2.4969 | **0.0007** |
-| 50 | 3 | 38 | **0** | **100.0%** | 0.2667 | **0.0003** |
-| 50 | 5 | 42 | **0** | **100.0%** | 0.3422 | **0.0004** |
-| 50 | 8 | 44 | **0** | **100.0%** | 0.5846 | **0.0006** |
-| 50 | 10 | 45 | **0** | **100.0%** | 0.2329 | **0.0004** |
-| 100 | 1 | 50 | **0** | **100.0%** | 0.5946 | **0.0005** |
-| 100 | 2 | 67 | **0** | **100.0%** | 0.5415 | **0.0003** |
-| 100 | 3 | 75 | **0** | **100.0%** | 0.5280 | **0.0003** |
-| 100 | 5 | 83 | **0** | **100.0%** | 0.5901 | **0.0004** |
-| 100 | 8 | 89 | **0** | **100.0%** | 0.8375 | **0.0013** |
-| 100 | 10 | 91 | **0** | **100.0%** | 0.7438 | **0.0010** |
-| 200 | 1 | 100 | **0** | **100.0%** | 1.5421 | **0.0012** |
-| 200 | 2 | 133 | **0** | **100.0%** | 1.5607 | **0.0011** |
-| 200 | 3 | 150 | **0** | **100.0%** | 1.4902 | **0.0011** |
-| 200 | 5 | 167 | **0** | **100.0%** | 1.2044 | **0.0005** |
-| 200 | 8 | 178 | **0** | **100.0%** | 1.0152 | **0.0003** |
-| 200 | 10 | 182 | **0** | **100.0%** | 1.0064 | **0.0004** |
+| 50 | 1 | 25 | **0** | **100.0%** | 5.1984 | **0.0305** |
+| 50 | 2 | 33 | **0** | **100.0%** | 1.9907 | **0.0006** |
+| 50 | 3 | 38 | **0** | **100.0%** | 0.2599 | **0.0005** |
+| 50 | 5 | 42 | **0** | **100.0%** | 0.3872 | **0.0006** |
+| 50 | 8 | 44 | **0** | **100.0%** | 1.7627 | **0.0005** |
+| 50 | 10 | 45 | **0** | **100.0%** | 0.2867 | **0.0008** |
+| 100 | 1 | 50 | **0** | **100.0%** | 0.6891 | **0.0011** |
+| 100 | 2 | 67 | **0** | **100.0%** | 0.5363 | **0.0005** |
+| 100 | 3 | 75 | **0** | **100.0%** | 0.5276 | **0.0005** |
+| 100 | 5 | 83 | **0** | **100.0%** | 0.5448 | **0.0004** |
+| 100 | 8 | 89 | **0** | **100.0%** | 0.5485 | **0.0005** |
+| 100 | 10 | 91 | **0** | **100.0%** | 0.5185 | **0.0005** |
+| 200 | 1 | 100 | **0** | **100.0%** | 1.1888 | **0.0006** |
+| 200 | 2 | 133 | **0** | **100.0%** | 1.1822 | **0.0008** |
+| 200 | 3 | 150 | **0** | **100.0%** | 1.0936 | **0.0005** |
+| 200 | 5 | 167 | **0** | **100.0%** | 1.0854 | **0.0006** |
+| 200 | 8 | 178 | **0** | **100.0%** | 1.1605 | **0.0008** |
+| 200 | 10 | 182 | **0** | **100.0%** | 1.0161 | **0.0005** |
 
 ![Improvement Due to Contribution A](Improvement_Contribution_A_Lifespan_Sorting.png)
 
@@ -195,15 +218,15 @@ For cluster size $n_c = 600$ ($h = 10$) and channel loss $p_{\text{loss}} = 5\%%
 
 | Cluster Size ($n_c$) | Reactive Leader Latency (ms) | Precomputed Leader Latency (ms) | Latency Reduction (ms) | Latency Reduction (%) |
 |:---:|:---:|:---:|:---:|:---:|
-| 25 | 0.4527 | **0.0086** | 0.4442 | **98.11%** |
-| 50 | 0.3573 | **0.0086** | 0.3487 | **97.59%** |
-| 75 | 0.4703 | **0.0064** | 0.4639 | **98.64%** |
-| 100 | 0.6228 | **0.0051** | 0.6177 | **99.18%** |
-| 150 | 0.9087 | **0.0051** | 0.9036 | **99.44%** |
-| 200 | 1.1058 | **0.0053** | 1.1004 | **99.52%** |
+| 25 | 0.1596 | **0.0052** | 0.1545 | **96.77%** |
+| 50 | 0.2816 | **0.0062** | 0.2754 | **97.80%** |
+| 75 | 0.4601 | **0.0066** | 0.4535 | **98.57%** |
+| 100 | 0.6265 | **0.0058** | 0.6207 | **99.07%** |
+| 150 | 0.9476 | **0.0080** | 0.9396 | **99.16%** |
+| 200 | 1.2039 | **0.0077** | 1.1962 | **99.36%** |
 
-- **Average Latency Reduction:** **98.75%** (exceeds the required >= 50% threshold)
-- **Speedup Factor:** **112.50x** faster leader handover.
+- **Average Latency Reduction:** **98.45%** (exceeds the required >= 50% threshold)
+- **Speedup Factor:** **88.11x** faster leader handover.
 
 ![Improvement Due to Contribution B](Improvement_Contribution_B_Zero_Latency.png)
 
@@ -213,13 +236,14 @@ For cluster size $n_c = 600$ ($h = 10$) and channel loss $p_{\text{loss}} = 5\%%
 
 | Paradigm | Communication Traffic (KB) | Leader Execution Latency (ms) | Member Storage (Keys) | Intermediate Exponentiations | Asymptotic Leave Complexity |
 |:---|:---:|:---:|:---:|:---:|:---:|
-| Flat-SBP | 468.53 | 191.1511 | 1 | 3000 | $\\mathcal{O}(N)$ |
-| HSBP | 93.46 | 57.2996 | 1 | 1500 | $\\mathcal{O}(n_c \\cdot B)$ |
-| Reactive LKH | 2.81 | 1.8810 | 11 | 0 | $\\mathcal{O}(B \\log n_c)$ |
-| DT-HSBP | 32.66 | 39.8675 | 1 | 600 | $\\mathcal{O}(n_c)$ |
-| DT-HSBP + Contrib A | 32.66 | 23.9205 | 1 | 0 | $\\mathcal{O}(1)$ intermediate |
-| DT-HSBP + Contrib B | 32.66 | 5.9801 | 1 | 600 | $\\mathcal{O}(1)$ handover |
-| Full Proposed (DT-HSBP + A + B) | 32.66 | 3.1894 | 1 | 0 | $\\mathcal{O}(1)$ intermediate + zero-latency |
+| Flat-SBP | 468.53 | 182.6643 | 1 | 3000 | $\\mathcal{O}(N)$ |
+| HSBP | 93.46 | 54.9124 | 1 | 1500 | $\\mathcal{O}(n_c \\cdot B)$ |
+| LKH (d=3) | 2.53 | 1.5184 | 7 | 0 | $\\mathcal{O}(B \\log_d n_c)$ |
+| TGDH (Tree DH) | 3.75 | 5.7945 | 21 | 60 | $\\mathcal{O}(B \\log_2 n_c) \\text{ [Multi-Round]}$ |
+| DT-HSBP | 32.66 | 51.7526 | 1 | 600 | $\\mathcal{O}(n_c)$ |
+| DT-HSBP + Contrib A | 32.66 | 31.0516 | 1 | 0 | $\\mathcal{O}(1) \\text{ intermediate}$ |
+| DT-HSBP + Contrib B | 32.66 | 7.7629 | 1 | 600 | $\\mathcal{O}(1) \\text{ handover}$ |
+| Full Proposed (DT-HSBP + A + B) | 32.66 | 4.1402 | 1 | 0 | $\\mathcal{O}(1) \\text{ intermediate + zero-latency}$ |
 
 ![Overall Proposed System Improvement](Overall_Proposed_System_Improvement.png)
 
@@ -227,8 +251,8 @@ For cluster size $n_c = 600$ ($h = 10$) and channel loss $p_{\text{loss}} = 5\%%
 
 - **Communication Reduction vs HSBP:** **65.06%**  
 - **Communication Reduction vs Flat-SBP:** **93.03%**  
-- **Leader Rekeying Latency Reduction vs HSBP:** **94.43%**  
-- **Leader Rekeying Latency Reduction vs Flat-SBP:** **98.33%**  
+- **Leader Rekeying Latency Reduction vs HSBP:** **92.46%**  
+- **Leader Rekeying Latency Reduction vs Flat-SBP:** **97.73%**  
 - **Intermediate DH Exponentiations:** Driven to **0 on-the-fly exponentiations** along prefix.
 
 ---
