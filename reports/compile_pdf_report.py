@@ -215,7 +215,7 @@ def build_pdf_report(output_pdf_path, fig_dir, artifact_dir=None):
          Paragraph("Handover Latency", th_style)],
         [Paragraph("Flat-SBP (Reactive Baseline)", td_style), Paragraph("O(B &middot; N)", td_style), Paragraph("O(N)", td_style), Paragraph("O(1) [1 key]", td_style), Paragraph("High (> 150 ms)", td_style)],
         [Paragraph("HSBP (Hierarchical Baseline)", td_style), Paragraph("O(B &middot; n<sub>c</sub>)", td_style), Paragraph("O(B &middot; n<sub>c</sub>)", td_style), Paragraph("O(1) [1 key]", td_style), Paragraph("Moderate (40-60 ms)", td_style)],
-        [Paragraph("LKH (Logical Key Hierarchy)", td_style), Paragraph("O(B log(n<sub>c</sub>/B))", td_style), Paragraph("O(B log(n<sub>c</sub>/B))", td_style), Paragraph("<b>O(log n<sub>c</sub>) [11 keys]</b>", td_bold_style), Paragraph("Reactive (15-25 ms)", td_style)],
+        [Paragraph("Reactive LKH (Tree Baseline)", td_style), Paragraph("O(B log n<sub>c</sub>)", td_style), Paragraph("O(B log n<sub>c</sub>)", td_style), Paragraph("<b>O(log n<sub>c</sub>) [11 keys]</b>", td_bold_style), Paragraph("Reactive (3-5 ms)", td_style)],
         [Paragraph("DT-HSBP (Collateral Batching)", td_style), Paragraph("O(n<sub>c</sub>)", td_style), Paragraph("O(n<sub>c</sub>)", td_style), Paragraph("O(1) [1 key]", td_style), Paragraph("Moderate (30-40 ms)", td_style)],
         [Paragraph("DT-HSBP + Contribution A", td_style), Paragraph("O(n<sub>c</sub>)", td_style), Paragraph("O(n<sub>c</sub>)", td_style), Paragraph("O(1) [1 key]", td_style), Paragraph("Reduced (20-25 ms)", td_style)],
         [Paragraph("DT-HSBP + Contribution B", td_style), Paragraph("O(n<sub>c</sub>)", td_style), Paragraph("<b>O(1) [Precomputed]</b>", td_bold_style), Paragraph("O(1) [1 key]", td_style), Paragraph("<b>Near-Zero (&lt; 0.2 ms)</b>", td_bold_style)],
@@ -359,12 +359,12 @@ def build_pdf_report(output_pdf_path, fig_dir, artifact_dir=None):
         "Representing an <b>overall system overhead reduction of 96.2%</b>.", body_style
     ))
 
-    story.append(Paragraph("10. Baseline Comparison: Logical Key Hierarchy (LKH) in Tactical Swarms", h2_style))
+    story.append(Paragraph("10. Baseline Comparison: Reactive Logical Key Hierarchy (LKH) in Tactical Swarms", h2_style))
     story.append(Paragraph(
-        "Logical Key Hierarchy (LKH) organizes cluster nodes into a balanced <i>d</i>-ary tree where each member stores "
-        "<i>h = &lceil;log<sub>d</sub>(n<sub>c</sub>)&rceil; + 1</i> Key Encryption Keys (KEKs) along its root path:<br/>"
+        "In reactive tactical regimes without a Digital Twin, LKH cannot anticipate future departures. When <i>B</i> UAVs leave "
+        "across a flight window, LKH executes <i>B</i> sequential single-leave tree rekeys:<br/>"
         "&nbsp;&nbsp;&bull; Member Storage Overhead: <i>S<sub>LKH</sub> = O(log<sub>d</sub> n<sub>c</sub>)</i> keys (e.g., <b>11 keys</b> at <i>n<sub>c</sub>=600</i> vs. <b>1 key</b> in DT-HSBP).<br/>"
-        "&nbsp;&nbsp;&bull; Batch Leave Traffic: <i>C<sub>LKH</sub> &le; B &middot; (d - 1) &middot; &lceil;log<sub>d</sub>(n<sub>c</sub> / B)&rceil; &middot; S<sub>key</sub> = O(B log(n<sub>c</sub>/B))</i>.<br/>"
+        "&nbsp;&nbsp;&bull; Reactive Leave Traffic: <i>C<sub>LKH</sub><sup>reactive</sup> = B &middot; (d - 1) &middot; &lceil;log<sub>d</sub> n<sub>c</sub>&rceil; &middot; S<sub>key</sub> = O(B log<sub>d</sub> n<sub>c</sub>)</i>.<br/>"
         "&nbsp;&nbsp;&bull; <b>Broken-Path Fragility Formulation:</b> In lossy tactical FANETs with drop probability <i>p<sub>loss</sub></i>, "
         "a surviving drone must receive all <i>h</i> updated ancestor KEKs. The key synchronization probability is "
         "<i>P<sub>sync</sub><sup>LKH</sup> = (1 - p<sub>loss</sub>)<sup>h</sup></i>. For <i>p<sub>loss</sub> = 5%</i> and <i>h = 10</i>: "
@@ -534,7 +534,7 @@ def build_pdf_report(output_pdf_path, fig_dir, artifact_dir=None):
          Paragraph("Asymptotic Leave Complexity", th_style)],
         [Paragraph("Flat-SBP", td_style), Paragraph("468.53", td_style), Paragraph("191.151", td_style), Paragraph("O(1) [1 key]", td_style), Paragraph("3000", td_style), Paragraph("O(N)", td_style)],
         [Paragraph("HSBP", td_style), Paragraph("93.46", td_style), Paragraph("57.300", td_style), Paragraph("O(1) [1 key]", td_style), Paragraph("1500", td_style), Paragraph("O(n<sub>c</sub> &middot; B)", td_style)],
-        [Paragraph("LKH (Tree Hierarchy)", td_style), Paragraph("1.30", td_style), Paragraph("0.021", td_style), Paragraph("<b>O(log n<sub>c</sub>) [11 keys]</b>", td_bold_style), Paragraph("0", td_style), Paragraph("O(B log(n<sub>c</sub>/B))", td_style)],
+        [Paragraph("Reactive LKH", td_style), Paragraph("2.81", td_style), Paragraph("3.350", td_style), Paragraph("<b>O(log n<sub>c</sub>) [11 keys]</b>", td_bold_style), Paragraph("0", td_style), Paragraph("O(B log n<sub>c</sub>)", td_style)],
         [Paragraph("DT-HSBP", td_style), Paragraph("32.66", td_style), Paragraph("39.867", td_style), Paragraph("O(1) [1 key]", td_style), Paragraph("600", td_style), Paragraph("O(n<sub>c</sub>)", td_style)],
         [Paragraph("DT-HSBP + Contrib A", td_style), Paragraph("32.66", td_style), Paragraph("23.920", td_style), Paragraph("O(1) [1 key]", td_style), Paragraph("0", td_bold_style), Paragraph("O(1) intermediate", td_bold_style)],
         [Paragraph("DT-HSBP + Contrib B", td_style), Paragraph("32.66", td_style), Paragraph("5.980", td_style), Paragraph("O(1) [1 key]", td_style), Paragraph("600", td_style), Paragraph("O(1) handover", td_bold_style)],

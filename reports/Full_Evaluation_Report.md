@@ -1,6 +1,6 @@
 # DT-HSBP & Proposed Contributions: Comprehensive Evaluation Report
 
-**Date:** 2026-10-20 08:41:10  
+**Date:** 2026-10-20 10:54:26  
 **Evaluation Scope:** Full Swarm Comparative Analysis (Baseline Flat-SBP, HSBP, DT-HSBP, Contribution A, Contribution B, and Full Proposed Architecture)
 
 ---
@@ -116,7 +116,7 @@ $$T_{\text{leader}}^{\text{reactive}} = \sum_{k=1}^{n_c - B} \tau_{\text{modexp}
 
 $$\mathcal{R}_{\text{latency}} = \frac{T_{\text{leader}}^{\text{reactive}} - \tau_{\text{lookup}}}{T_{\text{leader}}^{\text{reactive}}} \times 100\%% \ge 85\%%$$
 
-### M.8 Tree-Based Baseline: Logical Key Hierarchy (LKH) Formulation
+### M.8 Tree-Based Baseline: Reactive Logical Key Hierarchy (LKH) Formulation
 
 In LKH (Wong et al., IEEE/ACM ToN 2000), cluster members are organized as leaves of a logical $d$-ary key tree (binary $d=2$). Each node $v$ maintains a Key-Encrypting Key (KEK) $K_v$, with the root key serving as $K_{\text{group}}$.
 
@@ -124,9 +124,9 @@ In LKH (Wong et al., IEEE/ACM ToN 2000), cluster members are organized as leaves
 
 $$S_{\text{LKH}}^{\text{member}} = \lceil \log_d(n_c) \rceil + 1 = \mathcal{O}(\log n_c) \quad (\text{vs. } \mathcal{O}(1) \text{ in DT-HSBP})$$
 
-2. **Batch Departure Communication:** When $B$ UAVs leave, fresh KEKs are encrypted for surviving sibling subtrees, forming a Steiner tree of ciphertexts:
+2. **Reactive Departure Communication:** Without a Digital Twin to anticipate upcoming departures, LKH must reactively execute $B$ sequential single-leave tree rekeys across a mission window:
 
-$$C_{\text{LKH}}^{\text{batch}} = \sum_{l=1}^{\lceil \log_d n_c \rceil} \min(d^l, d \cdot B) \cdot S_{\text{key}} \approx \mathcal{O}\left(B \log_d \frac{n_c}{B}\right) \cdot S_{\text{key}}$$
+$$C_{\text{LKH}}^{\text{reactive}} = B \cdot (d - 1) \lceil \log_d n_c \rceil \cdot S_{\text{key}} = \mathcal{O}(B \log_d n_c) \cdot S_{\text{key}}$$
 
 3. **FANET Fragility Analysis (The Broken-Path Problem):** In lossy wireless UAV channels with packet loss rate $p_{\text{loss}}$, a UAV must successfully receive all $h = \lceil \log_2 n_c \rceil$ parent KEK updates to remain synchronized. The synchronization probability is:
 
@@ -140,7 +140,7 @@ For cluster size $n_c = 600$ ($h = 10$) and channel loss $p_{\text{loss}} = 5\%%
 |:---|:---:|:---:|:---:|:---:|:---:|:---:|
 | **Flat-SBP** | $\mathcal{O}(B \cdot N)$ | $\mathcal{O}(N)$ | $\mathcal{O}(1)$ | $\mathcal{O}(1)$ [1 key] | High ($> 150\text{ ms}$) | High |
 | **HSBP** | $\mathcal{O}(B \cdot n_c)$ | $\mathcal{O}(B \cdot n_c)$ | $\mathcal{O}(1)$ | $\mathcal{O}(1)$ [1 key] | Moderate ($40\text{--}60\text{ ms}$) | High |
-| **LKH (Tree Baseline)** | $\mathcal{O}\left(B \log \frac{n_c}{B}\right)$ | $\mathcal{O}\left(B \log \frac{n_c}{B}\right)$ | $\mathcal{O}(\log n_c)$ | **$\mathcal{O}(\log n_c)$ [11 keys]** | Reactive ($15\text{--}25\text{ ms}$) | **Low [Broken Path Risk]** |
+| **Reactive LKH** | $\mathcal{O}(B \log n_c)$ | $\mathcal{O}(B \log n_c)$ | $\mathcal{O}(\log n_c)$ | **$\mathcal{O}(\log n_c)$ [11 keys]** | Reactive ($3\text{--}5\text{ ms}$) | **Low [Broken Path Risk]** |
 | **DT-HSBP** | $\mathcal{O}(n_c)$ | $\mathcal{O}(n_c)$ | $\mathcal{O}(1)$ | $\mathcal{O}(1)$ [1 key] | Moderate ($30\text{--}40\text{ ms}$) | High |
 | **DT-HSBP + Contrib A** | $\mathcal{O}(n_c)$ | $\mathcal{O}(n_c)$ | $\mathcal{O}(1)$ | $\mathcal{O}(1)$ [1 key] | Reduced ($20\text{--}25\text{ ms}$) | High |
 | **DT-HSBP + Contrib B** | $\mathcal{O}(n_c)$ | **$\mathcal{O}(1)$ [Precomputed]** | $\mathcal{O}(1)$ | $\mathcal{O}(1)$ [1 key] | **Near-Zero ($< 0.2\text{ ms}$)** | High |
@@ -168,24 +168,24 @@ For cluster size $n_c = 600$ ($h = 10$) and channel loss $p_{\text{loss}} = 5\%%
 
 | Cluster Size ($n_c$) | Batch Size ($B$) | Unsorted Exponentiations | Lifespan-Sorted Exponentiations | Exponentiation Savings (%) | Unsorted Time (ms) | Sorted Time (ms) |
 |:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| 50 | 1 | 25 | **0** | **100.0%** | 8.6808 | **0.0243** |
-| 50 | 2 | 33 | **0** | **100.0%** | 2.3468 | **0.0005** |
-| 50 | 3 | 38 | **0** | **100.0%** | 0.2756 | **0.0003** |
-| 50 | 5 | 42 | **0** | **100.0%** | 0.3366 | **0.0003** |
-| 50 | 8 | 44 | **0** | **100.0%** | 1.4223 | **0.0006** |
-| 50 | 10 | 45 | **0** | **100.0%** | 0.3487 | **0.0011** |
-| 100 | 1 | 50 | **0** | **100.0%** | 0.8397 | **0.0011** |
-| 100 | 2 | 67 | **0** | **100.0%** | 0.5737 | **0.0003** |
-| 100 | 3 | 75 | **0** | **100.0%** | 0.5516 | **0.0003** |
-| 100 | 5 | 83 | **0** | **100.0%** | 0.5538 | **0.0003** |
-| 100 | 8 | 89 | **0** | **100.0%** | 0.5996 | **0.0006** |
-| 100 | 10 | 91 | **0** | **100.0%** | 0.5140 | **0.0003** |
-| 200 | 1 | 100 | **0** | **100.0%** | 1.3704 | **0.0008** |
-| 200 | 2 | 133 | **0** | **100.0%** | 1.2697 | **0.0006** |
-| 200 | 3 | 150 | **0** | **100.0%** | 1.5137 | **0.0011** |
-| 200 | 5 | 167 | **0** | **100.0%** | 1.5238 | **0.0011** |
-| 200 | 8 | 178 | **0** | **100.0%** | 1.2486 | **0.0007** |
-| 200 | 10 | 182 | **0** | **100.0%** | 1.0544 | **0.0004** |
+| 50 | 1 | 25 | **0** | **100.0%** | 10.1603 | **0.0298** |
+| 50 | 2 | 33 | **0** | **100.0%** | 2.4969 | **0.0007** |
+| 50 | 3 | 38 | **0** | **100.0%** | 0.2667 | **0.0003** |
+| 50 | 5 | 42 | **0** | **100.0%** | 0.3422 | **0.0004** |
+| 50 | 8 | 44 | **0** | **100.0%** | 0.5846 | **0.0006** |
+| 50 | 10 | 45 | **0** | **100.0%** | 0.2329 | **0.0004** |
+| 100 | 1 | 50 | **0** | **100.0%** | 0.5946 | **0.0005** |
+| 100 | 2 | 67 | **0** | **100.0%** | 0.5415 | **0.0003** |
+| 100 | 3 | 75 | **0** | **100.0%** | 0.5280 | **0.0003** |
+| 100 | 5 | 83 | **0** | **100.0%** | 0.5901 | **0.0004** |
+| 100 | 8 | 89 | **0** | **100.0%** | 0.8375 | **0.0013** |
+| 100 | 10 | 91 | **0** | **100.0%** | 0.7438 | **0.0010** |
+| 200 | 1 | 100 | **0** | **100.0%** | 1.5421 | **0.0012** |
+| 200 | 2 | 133 | **0** | **100.0%** | 1.5607 | **0.0011** |
+| 200 | 3 | 150 | **0** | **100.0%** | 1.4902 | **0.0011** |
+| 200 | 5 | 167 | **0** | **100.0%** | 1.2044 | **0.0005** |
+| 200 | 8 | 178 | **0** | **100.0%** | 1.0152 | **0.0003** |
+| 200 | 10 | 182 | **0** | **100.0%** | 1.0064 | **0.0004** |
 
 ![Improvement Due to Contribution A](Improvement_Contribution_A_Lifespan_Sorting.png)
 
@@ -195,15 +195,15 @@ For cluster size $n_c = 600$ ($h = 10$) and channel loss $p_{\text{loss}} = 5\%%
 
 | Cluster Size ($n_c$) | Reactive Leader Latency (ms) | Precomputed Leader Latency (ms) | Latency Reduction (ms) | Latency Reduction (%) |
 |:---:|:---:|:---:|:---:|:---:|
-| 25 | 0.4316 | **0.0081** | 0.4234 | **98.11%** |
-| 50 | 0.3233 | **0.0067** | 0.3166 | **97.93%** |
-| 75 | 0.4625 | **0.0069** | 0.4556 | **98.52%** |
-| 100 | 0.6219 | **0.0040** | 0.6179 | **99.35%** |
-| 150 | 0.8235 | **0.0056** | 0.8178 | **99.32%** |
-| 200 | 1.0484 | **0.0063** | 1.0420 | **99.39%** |
+| 25 | 0.4527 | **0.0086** | 0.4442 | **98.11%** |
+| 50 | 0.3573 | **0.0086** | 0.3487 | **97.59%** |
+| 75 | 0.4703 | **0.0064** | 0.4639 | **98.64%** |
+| 100 | 0.6228 | **0.0051** | 0.6177 | **99.18%** |
+| 150 | 0.9087 | **0.0051** | 0.9036 | **99.44%** |
+| 200 | 1.1058 | **0.0053** | 1.1004 | **99.52%** |
 
-- **Average Latency Reduction:** **98.77%** (exceeds the required >= 50% threshold)
-- **Speedup Factor:** **105.74x** faster leader handover.
+- **Average Latency Reduction:** **98.75%** (exceeds the required >= 50% threshold)
+- **Speedup Factor:** **112.50x** faster leader handover.
 
 ![Improvement Due to Contribution B](Improvement_Contribution_B_Zero_Latency.png)
 
@@ -215,7 +215,7 @@ For cluster size $n_c = 600$ ($h = 10$) and channel loss $p_{\text{loss}} = 5\%%
 |:---|:---:|:---:|:---:|:---:|:---:|
 | Flat-SBP | 468.53 | 191.1511 | 1 | 3000 | $\\mathcal{O}(N)$ |
 | HSBP | 93.46 | 57.2996 | 1 | 1500 | $\\mathcal{O}(n_c \\cdot B)$ |
-| LKH (Tree) | 1.31 | 1.0135 | 11 | 0 | $\\mathcal{O}(B \\log(n_c/B))$ |
+| Reactive LKH | 2.81 | 1.8810 | 11 | 0 | $\\mathcal{O}(B \\log n_c)$ |
 | DT-HSBP | 32.66 | 39.8675 | 1 | 600 | $\\mathcal{O}(n_c)$ |
 | DT-HSBP + Contrib A | 32.66 | 23.9205 | 1 | 0 | $\\mathcal{O}(1)$ intermediate |
 | DT-HSBP + Contrib B | 32.66 | 5.9801 | 1 | 600 | $\\mathcal{O}(1)$ handover |

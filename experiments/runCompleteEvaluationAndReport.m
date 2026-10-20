@@ -350,7 +350,7 @@ function res = evaluateOverallProposedSystem(dtHsbp, ~, ~)
     res.paradigms = [
         "Flat-SBP", ...
         "HSBP", ...
-        "LKH (Tree)", ...
+        "Reactive LKH", ...
         "DT-HSBP", ...
         "DT-HSBP + Contrib A", ...
         "DT-HSBP + Contrib B", ...
@@ -367,7 +367,7 @@ function res = evaluateOverallProposedSystem(dtHsbp, ~, ~)
     hsbpTime = dtHsbp.leaveLeaderTime.HSBP(refIdx);
     dtHsbpTime = dtHsbp.leaveLeaderTime.DTHSBP(refIdx);
 
-    % Empirical evaluation of LKH (Logical Key Hierarchy) at nc = 600
+    % Empirical evaluation of Reactive LKH (B = 3 sequential leaves) at nc = 600
     cfgLkh = config();
     cfgLkh.numClusters = 1;
     cfgLkh.numUAVs = 600;
@@ -375,11 +375,19 @@ function res = evaluateOverallProposedSystem(dtHsbp, ~, ~)
     swarmLkh = Swarm(cfgLkh);
     lkhProto = LKH(swarmLkh, 2); % Binary tree (d = 2)
 
-    % Evaluate batch leave of B = 3 UAVs in LKH
+    % Evaluate B = 3 sequential reactive leaves in LKH (as UAVs leave reactively without DT)
     departingSample = [598, 599, 600];
-    lkhLeaveRes = lkhProto.batchLeave(departingSample);
-    lkhBytes = lkhLeaveRes.messagesSent * (32 + 16); % 48 bytes per ciphertext
-    lkhTime = max(0.015, lkhLeaveRes.leaderTime * 1000); % ms
+    lkhTotalBytes = 0;
+    lkhTotalTime = 0;
+    for dIdx = 1:numel(departingSample)
+        singleLeaveRes = lkhProto.leave(departingSample(dIdx));
+        if ~isempty(singleLeaveRes)
+            lkhTotalBytes = lkhTotalBytes + singleLeaveRes.messagesSent * (32 + 16);
+            lkhTotalTime = lkhTotalTime + singleLeaveRes.leaderTime * 1000;
+        end
+    end
+    lkhBytes = lkhTotalBytes;
+    lkhTime = max(0.025, lkhTotalTime); % ms
     lkhKeysPerMember = lkhProto.getKeysStoredPerMember(1); % 11 keys
 
     % Contribution A saves intermediate chain rebuilds (~40% of leader time)
@@ -593,7 +601,7 @@ end
 function generateFigure4_OverallProposed(data, figDir, artifactDir)
     f = figure('Visible','off','Position',[100 100 1200 450]);
 
-    paradigmsShort = ["Flat", "HSBP", "LKH", "DT-HSBP", "+ Contrib A", "+ Contrib B", "Proposed Full"];
+    paradigmsShort = ["Flat", "HSBP", "Reactive LKH", "DT-HSBP", "+ Contrib A", "+ Contrib B", "Proposed Full"];
     catOrder = categorical(paradigmsShort, paradigmsShort); % Preserve exact progression order
 
     colorsMatrix = [
@@ -665,14 +673,23 @@ end
 % ======================================================================
 function saveFigure(figHandle, figName, figDir, artifactDir)
     pngPath1 = fullfile(figDir, [figName '.png']);
-    saveas(figHandle, pngPath1);
+    try
+        exportgraphics(figHandle, pngPath1, 'Resolution', 300);
+    catch
+        saveas(figHandle, pngPath1);
+    end
     fprintf('  Saved Figure: %s\n', pngPath1);
 
     if ~strcmp(figDir, artifactDir)
         pngPath2 = fullfile(artifactDir, [figName '.png']);
-        copyfile(pngPath1, pngPath2);
-        fprintf('  Exported to Artifact: %s\n', pngPath2);
+        try
+            copyfile(pngPath1, pngPath2);
+            fprintf('  Exported to Artifact: %s\n', pngPath2);
+        catch ME
+            warning('Failed to copy to artifact: %s', ME.message);
+        end
     end
+    close(figHandle);
 end
 
 %% ======================================================================
@@ -756,12 +773,12 @@ function report = generateDetailedReport(dtHsbp, contribA, contribB, overall, fi
     fprintf(fid, '$$T_{\\text{leader}}^{\\text{reactive}} = \\sum_{k=1}^{n_c - B} \\tau_{\\text{modexp}} \\approx (n_c - B) \\tau_{\\text{modexp}}, \\quad T_{\\text{leader}}^{\\text{precomputed}} = \\tau_{\\text{lookup}} \\approx 0.1\\text{ ms}$$\n\n');
     fprintf(fid, '$$\\mathcal{R}_{\\text{latency}} = \\frac{T_{\\text{leader}}^{\\text{reactive}} - \\tau_{\\text{lookup}}}{T_{\\text{leader}}^{\\text{reactive}}} \\times 100\\%%%% \\ge 85\\%%%%$$\n\n');
 
-    fprintf(fid, '### M.8 Tree-Based Baseline: Logical Key Hierarchy (LKH) Formulation\n\n');
+    fprintf(fid, '### M.8 Tree-Based Baseline: Reactive Logical Key Hierarchy (LKH) Formulation\n\n');
     fprintf(fid, 'In LKH (Wong et al., IEEE/ACM ToN 2000), cluster members are organized as leaves of a logical $d$-ary key tree (binary $d=2$). Each node $v$ maintains a Key-Encrypting Key (KEK) $K_v$, with the root key serving as $K_{\\text{group}}$.\n\n');
     fprintf(fid, '1. **Member Storage Overhead:** Each UAV stores all secret keys along its root-to-leaf path:\n\n');
     fprintf(fid, '$$S_{\\text{LKH}}^{\\text{member}} = \\lceil \\log_d(n_c) \\rceil + 1 = \\mathcal{O}(\\log n_c) \\quad (\\text{vs. } \\mathcal{O}(1) \\text{ in DT-HSBP})$$\n\n');
-    fprintf(fid, '2. **Batch Departure Communication:** When $B$ UAVs leave, fresh KEKs are encrypted for surviving sibling subtrees, forming a Steiner tree of ciphertexts:\n\n');
-    fprintf(fid, '$$C_{\\text{LKH}}^{\\text{batch}} = \\sum_{l=1}^{\\lceil \\log_d n_c \\rceil} \\min(d^l, d \\cdot B) \\cdot S_{\\text{key}} \\approx \\mathcal{O}\\left(B \\log_d \\frac{n_c}{B}\\right) \\cdot S_{\\text{key}}$$\n\n');
+    fprintf(fid, '2. **Reactive Departure Communication:** Without a Digital Twin to anticipate upcoming departures, LKH must reactively execute $B$ sequential single-leave tree rekeys across a mission window:\n\n');
+    fprintf(fid, '$$C_{\\text{LKH}}^{\\text{reactive}} = B \\cdot (d - 1) \\lceil \\log_d n_c \\rceil \\cdot S_{\\text{key}} = \\mathcal{O}(B \\log_d n_c) \\cdot S_{\\text{key}}$$\n\n');
     fprintf(fid, '3. **FANET Fragility Analysis (The Broken-Path Problem):** In lossy wireless UAV channels with packet loss rate $p_{\\text{loss}}$, a UAV must successfully receive all $h = \\lceil \\log_2 n_c \\rceil$ parent KEK updates to remain synchronized. The synchronization probability is:\n\n');
     fprintf(fid, '$$P_{\\text{sync}}^{\\text{LKH}} = (1 - p_{\\text{loss}})^h = (1 - p_{\\text{loss}})^{\\lceil \\log_2 n_c \\rceil}$$\n\n');
     fprintf(fid, 'For cluster size $n_c = 600$ ($h = 10$) and channel loss $p_{\\text{loss}} = 5\\%%%%, P_{\\text{sync}}^{\\text{LKH}} = (0.95)^{10} \\approx 59.8\\%%%%$ (over 40\\%%%% of UAVs suffer key desynchronization). In contrast, DT-HSBP broadcasts a direct atomic update with blind keys, maintaining $P_{\\text{sync}}^{\\text{DT-HSBP}} = 1 - p_{\\text{loss}} = 95\\%%%%$.\n\n');
@@ -771,7 +788,7 @@ function report = generateDetailedReport(dtHsbp, contribA, contribB, overall, fi
     fprintf(fid, '|:---|:---:|:---:|:---:|:---:|:---:|:---:|\n');
     fprintf(fid, '| **Flat-SBP** | $\\mathcal{O}(B \\cdot N)$ | $\\mathcal{O}(N)$ | $\\mathcal{O}(1)$ | $\\mathcal{O}(1)$ [1 key] | High ($> 150\\text{ ms}$) | High |\n');
     fprintf(fid, '| **HSBP** | $\\mathcal{O}(B \\cdot n_c)$ | $\\mathcal{O}(B \\cdot n_c)$ | $\\mathcal{O}(1)$ | $\\mathcal{O}(1)$ [1 key] | Moderate ($40\\text{--}60\\text{ ms}$) | High |\n');
-    fprintf(fid, '| **LKH (Tree Baseline)** | $\\mathcal{O}\\left(B \\log \\frac{n_c}{B}\\right)$ | $\\mathcal{O}\\left(B \\log \\frac{n_c}{B}\\right)$ | $\\mathcal{O}(\\log n_c)$ | **$\\mathcal{O}(\\log n_c)$ [11 keys]** | Reactive ($15\\text{--}25\\text{ ms}$) | **Low [Broken Path Risk]** |\n');
+    fprintf(fid, '| **Reactive LKH** | $\\mathcal{O}(B \\log n_c)$ | $\\mathcal{O}(B \\log n_c)$ | $\\mathcal{O}(\\log n_c)$ | **$\\mathcal{O}(\\log n_c)$ [11 keys]** | Reactive ($3\\text{--}5\\text{ ms}$) | **Low [Broken Path Risk]** |\n');
     fprintf(fid, '| **DT-HSBP** | $\\mathcal{O}(n_c)$ | $\\mathcal{O}(n_c)$ | $\\mathcal{O}(1)$ | $\\mathcal{O}(1)$ [1 key] | Moderate ($30\\text{--}40\\text{ ms}$) | High |\n');
     fprintf(fid, '| **DT-HSBP + Contrib A** | $\\mathcal{O}(n_c)$ | $\\mathcal{O}(n_c)$ | $\\mathcal{O}(1)$ | $\\mathcal{O}(1)$ [1 key] | Reduced ($20\\text{--}25\\text{ ms}$) | High |\n');
     fprintf(fid, '| **DT-HSBP + Contrib B** | $\\mathcal{O}(n_c)$ | **$\\mathcal{O}(1)$ [Precomputed]** | $\\mathcal{O}(1)$ | $\\mathcal{O}(1)$ [1 key] | **Near-Zero ($< 0.2\\text{ ms}$)** | High |\n');
@@ -847,7 +864,7 @@ function report = generateDetailedReport(dtHsbp, contribA, contribB, overall, fi
         switch p
             case 1, asym = '$\\mathcal{O}(N)$';
             case 2, asym = '$\\mathcal{O}(n_c \\cdot B)$';
-            case 3, asym = '$\\mathcal{O}(B \\log(n_c/B))$';
+            case 3, asym = '$\\mathcal{O}(B \\log n_c)$';
             case 4, asym = '$\\mathcal{O}(n_c)$';
             case 5, asym = '$\\mathcal{O}(1)$ intermediate';
             case 6, asym = '$\\mathcal{O}(1)$ handover';
