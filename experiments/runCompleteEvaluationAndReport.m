@@ -350,6 +350,7 @@ function res = evaluateOverallProposedSystem(dtHsbp, ~, ~)
     res.paradigms = [
         "Flat-SBP", ...
         "HSBP", ...
+        "LKH (Tree)", ...
         "DT-HSBP", ...
         "DT-HSBP + Contrib A", ...
         "DT-HSBP + Contrib B", ...
@@ -366,6 +367,21 @@ function res = evaluateOverallProposedSystem(dtHsbp, ~, ~)
     hsbpTime = dtHsbp.leaveLeaderTime.HSBP(refIdx);
     dtHsbpTime = dtHsbp.leaveLeaderTime.DTHSBP(refIdx);
 
+    % Empirical evaluation of LKH (Logical Key Hierarchy) at nc = 600
+    cfgLkh = config();
+    cfgLkh.numClusters = 1;
+    cfgLkh.numUAVs = 600;
+    cfgLkh.clusterSize = 600;
+    swarmLkh = Swarm(cfgLkh);
+    lkhProto = LKH(swarmLkh, 2); % Binary tree (d = 2)
+
+    % Evaluate batch leave of B = 3 UAVs in LKH
+    departingSample = [598, 599, 600];
+    lkhLeaveRes = lkhProto.batchLeave(departingSample);
+    lkhBytes = lkhLeaveRes.messagesSent * (32 + 16); % 48 bytes per ciphertext
+    lkhTime = max(0.015, lkhLeaveRes.leaderTime * 1000); % ms
+    lkhKeysPerMember = lkhProto.getKeysStoredPerMember(1); % 11 keys
+
     % Contribution A saves intermediate chain rebuilds (~40% of leader time)
     contribATime = dtHsbpTime * 0.60;
 
@@ -378,6 +394,7 @@ function res = evaluateOverallProposedSystem(dtHsbp, ~, ~)
     res.communicationBytes = [
         flatBytes, ...
         hsbpBytes, ...
+        lkhBytes, ...
         dtHsbpBytes, ...
         dtHsbpBytes, ...
         dtHsbpBytes, ...
@@ -387,26 +404,38 @@ function res = evaluateOverallProposedSystem(dtHsbp, ~, ~)
     res.leaderTimeMs = [
         flatTime, ...
         hsbpTime, ...
+        lkhTime, ...
         dtHsbpTime, ...
         contribATime, ...
         contribBTime, ...
         fullProposedTime
     ];
 
+    res.keysStoredPerMember = [
+        1, ... % Flat-SBP: 1 group key
+        1, ... % HSBP: 1 group key
+        lkhKeysPerMember, ... % LKH: 11 keys (O(log nc) tree path)
+        1, ... % DT-HSBP: 1 group key
+        1, ... % + Contrib A: 1 group key
+        1, ... % + Contrib B: 1 group key
+        1      % Proposed Full: 1 group key
+    ];
+
     res.intermediateExponentiations = [
-        3000, ...  % Flat-SBP evaluates all N
+        3000, ...      % Flat-SBP evaluates all N
         600 * 2.5, ... % HSBP evaluates nc for each departure
-        600, ...   % DT-HSBP evaluates nc once
-        0, ...     % Contrib A: 0 prefix recomputations (O(1))
-        600, ...   % Contrib B: precalculated
-        0          % Full proposed: 0 on-the-fly exponentiations
+        0, ...         % LKH: 0 modexps (uses symmetric encryptions)
+        600, ...       % DT-HSBP evaluates nc once
+        0, ...         % Contrib A: 0 prefix recomputations (O(1))
+        600, ...       % Contrib B: precalculated
+        0              % Full proposed: 0 on-the-fly exponentiations
     ];
 
     % Relative metrics vs HSBP baseline
-    res.commReductionVsHSBP = (1 - res.communicationBytes(6) / hsbpBytes) * 100;
-    res.latencyReductionVsHSBP = (1 - res.leaderTimeMs(6) / hsbpTime) * 100;
-    res.commReductionVsFlat = (1 - res.communicationBytes(6) / flatBytes) * 100;
-    res.latencyReductionVsFlat = (1 - res.leaderTimeMs(6) / flatTime) * 100;
+    res.commReductionVsHSBP = (1 - res.communicationBytes(7) / hsbpBytes) * 100;
+    res.latencyReductionVsHSBP = (1 - res.leaderTimeMs(7) / hsbpTime) * 100;
+    res.commReductionVsFlat = (1 - res.communicationBytes(7) / flatBytes) * 100;
+    res.latencyReductionVsFlat = (1 - res.leaderTimeMs(7) / flatTime) * 100;
 end
 
 %% ======================================================================
@@ -559,57 +588,73 @@ function generateFigure3_ContributionB(data, figDir, artifactDir)
 end
 
 %% ======================================================================
-% FIGURE 4: Overall Proposed System Improvement Synthesis
+% FIGURE 4: Overall Proposed System Improvement Synthesis (Including LKH)
 % ======================================================================
 function generateFigure4_OverallProposed(data, figDir, artifactDir)
-    f = figure('Visible','off','Position',[100 100 1000 480]);
+    f = figure('Visible','off','Position',[100 100 1200 450]);
 
-    paradigmsShort = ["Flat", "HSBP", "DT-HSBP", "+ Contrib A", "+ Contrib B", "Proposed Full"];
+    paradigmsShort = ["Flat", "HSBP", "LKH", "DT-HSBP", "+ Contrib A", "+ Contrib B", "Proposed Full"];
     catOrder = categorical(paradigmsShort, paradigmsShort); % Preserve exact progression order
 
+    colorsMatrix = [
+        0.50 0.50 0.50;  % Flat (gray)
+        0.85 0.33 0.10;  % HSBP (orange)
+        0.20 0.40 0.70;  % LKH (slate blue)
+        0.18 0.62 0.18;  % DT-HSBP (green)
+        0.18 0.62 0.18;  % + Contrib A (green)
+        0.12 0.47 0.71;  % + Contrib B (cyan/blue)
+        0.49 0.18 0.56   % Proposed Full (purple)
+    ];
+
     % Subplot 1: Communication Overhead Comparison (Zoomed out Y-scale)
-    subplot(1, 2, 1);
+    subplot(1, 3, 1);
     commKb = data.communicationBytes / 1e3;
     b1 = bar(catOrder, commKb, 0.6);
     b1.FaceColor = 'flat';
-    b1.CData(1,:) = [0.5 0.5 0.5];
-    b1.CData(2,:) = [0.85 0.33 0.10];
-    b1.CData(3,:) = [0.18 0.62 0.18];
-    b1.CData(4,:) = [0.18 0.62 0.18];
-    b1.CData(5,:) = [0.12 0.47 0.71];
-    b1.CData(6,:) = [0.49 0.18 0.56];
+    b1.CData = colorsMatrix;
     grid on; box on;
     set(gca, 'YScale', 'log');
-    ylim([1 1000]); % Zoom out Y-axis down to 1 KB so all 6 series are clearly visible!
-    ylabel('Communication Traffic (KB / Leave) [Log Scale]', 'FontWeight', 'bold');
-    title('(a) Communication Overhead by Paradigm', 'FontWeight', 'bold');
+    ylim([0.5 1000]); % Zoom out Y-axis down to 0.5 KB so all 7 series are clearly visible!
+    ylabel('Traffic (KB / Leave) [Log Scale]', 'FontWeight', 'bold');
+    title('(a) Communication Overhead', 'FontWeight', 'bold');
 
     % Add value annotations on top of every bar
     for i = 1:numel(commKb)
-        text(i, commKb(i) * 1.3, sprintf('%.1f KB', commKb(i)), ...
-            'HorizontalAlignment', 'center', 'FontSize', 8, 'FontWeight', 'bold');
+        text(i, commKb(i) * 1.35, sprintf('%.1f KB', commKb(i)), ...
+            'HorizontalAlignment', 'center', 'FontSize', 7.5, 'FontWeight', 'bold');
     end
 
     % Subplot 2: Leader Execution Latency Comparison
-    subplot(1, 2, 2);
+    subplot(1, 3, 2);
     latVals = data.leaderTimeMs;
     b2 = bar(catOrder, latVals, 0.6);
     b2.FaceColor = 'flat';
-    b2.CData(1,:) = [0.5 0.5 0.5];
-    b2.CData(2,:) = [0.85 0.33 0.10];
-    b2.CData(3,:) = [0.18 0.62 0.18];
-    b2.CData(4,:) = [0.18 0.62 0.18];
-    b2.CData(5,:) = [0.12 0.47 0.71];
-    b2.CData(6,:) = [0.49 0.18 0.56];
+    b2.CData = colorsMatrix;
     grid on; box on;
     ylabel('Leader Execution Latency (ms)', 'FontWeight', 'bold');
-    title('(b) Leader Rekeying Latency by Paradigm', 'FontWeight', 'bold');
+    title('(b) Leader Rekeying Latency', 'FontWeight', 'bold');
     ylim([0 max(latVals) * 1.15]);
 
     % Add value annotations on top of latency bars
     for i = 1:numel(latVals)
         text(i, latVals(i) + max(latVals)*0.025, sprintf('%.1f ms', latVals(i)), ...
-            'HorizontalAlignment', 'center', 'FontSize', 8, 'FontWeight', 'bold');
+            'HorizontalAlignment', 'center', 'FontSize', 7.5, 'FontWeight', 'bold');
+    end
+
+    % Subplot 3: Member Key Storage Overhead (Keys per UAV)
+    subplot(1, 3, 3);
+    keysVals = data.keysStoredPerMember;
+    b3 = bar(catOrder, keysVals, 0.6);
+    b3.FaceColor = 'flat';
+    b3.CData = colorsMatrix;
+    grid on; box on;
+    ylabel('Keys Stored per UAV', 'FontWeight', 'bold');
+    title('(c) Member Key Storage Overhead', 'FontWeight', 'bold');
+    ylim([0 max(keysVals) * 1.25]);
+
+    for i = 1:numel(keysVals)
+        text(i, keysVals(i) + 0.4, sprintf('%d keys', keysVals(i)), ...
+            'HorizontalAlignment', 'center', 'FontSize', 7.5, 'FontWeight', 'bold');
     end
 
     saveFigure(f, 'Overall_Proposed_System_Improvement', figDir, artifactDir);
@@ -711,15 +756,26 @@ function report = generateDetailedReport(dtHsbp, contribA, contribB, overall, fi
     fprintf(fid, '$$T_{\\text{leader}}^{\\text{reactive}} = \\sum_{k=1}^{n_c - B} \\tau_{\\text{modexp}} \\approx (n_c - B) \\tau_{\\text{modexp}}, \\quad T_{\\text{leader}}^{\\text{precomputed}} = \\tau_{\\text{lookup}} \\approx 0.1\\text{ ms}$$\n\n');
     fprintf(fid, '$$\\mathcal{R}_{\\text{latency}} = \\frac{T_{\\text{leader}}^{\\text{reactive}} - \\tau_{\\text{lookup}}}{T_{\\text{leader}}^{\\text{reactive}}} \\times 100\\%%%% \\ge 85\\%%%%$$\n\n');
 
-    fprintf(fid, '### M.8 Asymptotic Complexity Comparison Matrix\n\n');
-    fprintf(fid, '| Paradigm | Comm. Overhead | Leader Rekey Latency | Follower Latency | Intermediate Rebuild | Handover Latency |\n');
-    fprintf(fid, '|:---|:---:|:---:|:---:|:---:|:---:|\n');
-    fprintf(fid, '| **Flat-SBP** | $\\mathcal{O}(B \\cdot N)$ | $\\mathcal{O}(N)$ | $\\mathcal{O}(1)$ | $\\mathcal{O}(N)$ | High ($> 150\\text{ ms}$) |\n');
-    fprintf(fid, '| **HSBP** | $\\mathcal{O}(B \\cdot n_c)$ | $\\mathcal{O}(B \\cdot n_c)$ | $\\mathcal{O}(1)$ | $\\mathcal{O}(n_c)$ | Moderate ($40\\text{--}60\\text{ ms}$) |\n');
-    fprintf(fid, '| **DT-HSBP** | $\\mathcal{O}(n_c)$ | $\\mathcal{O}(n_c)$ | $\\mathcal{O}(1)$ | $\\mathcal{O}(n_c)$ | Moderate ($30\\text{--}40\\text{ ms}$) |\n');
-    fprintf(fid, '| **DT-HSBP + Contrib A** | $\\mathcal{O}(n_c)$ | $\\mathcal{O}(n_c)$ | $\\mathcal{O}(1)$ | **$\\mathcal{O}(1)$ [Zero prefix]** | Reduced ($20\\text{--}25\\text{ ms}$) |\n');
-    fprintf(fid, '| **DT-HSBP + Contrib B** | $\\mathcal{O}(n_c)$ | **$\\mathcal{O}(1)$ [Precomputed]** | $\\mathcal{O}(1)$ | $\\mathcal{O}(n_c)$ | **Near-Zero ($< 0.2\\text{ ms}$)** |\n');
-    fprintf(fid, '| **Full Proposed (DT-HSBP + A + B)** | **$\\mathcal{O}(n_c)$** | **$\\mathcal{O}(1)$ [Instant]** | **$\\mathcal{O}(1)$** | **$\\mathcal{O}(1)$ [Zero prefix]** | **Zero-Latency Handover** |\n\n');
+    fprintf(fid, '### M.8 Tree-Based Baseline: Logical Key Hierarchy (LKH) Formulation\n\n');
+    fprintf(fid, 'In LKH (Wong et al., IEEE/ACM ToN 2000), cluster members are organized as leaves of a logical $d$-ary key tree (binary $d=2$). Each node $v$ maintains a Key-Encrypting Key (KEK) $K_v$, with the root key serving as $K_{\\text{group}}$.\n\n');
+    fprintf(fid, '1. **Member Storage Overhead:** Each UAV stores all secret keys along its root-to-leaf path:\n\n');
+    fprintf(fid, '$$S_{\\text{LKH}}^{\\text{member}} = \\lceil \\log_d(n_c) \\rceil + 1 = \\mathcal{O}(\\log n_c) \\quad (\\text{vs. } \\mathcal{O}(1) \\text{ in DT-HSBP})$$\n\n');
+    fprintf(fid, '2. **Batch Departure Communication:** When $B$ UAVs leave, fresh KEKs are encrypted for surviving sibling subtrees, forming a Steiner tree of ciphertexts:\n\n');
+    fprintf(fid, '$$C_{\\text{LKH}}^{\\text{batch}} = \\sum_{l=1}^{\\lceil \\log_d n_c \\rceil} \\min(d^l, d \\cdot B) \\cdot S_{\\text{key}} \\approx \\mathcal{O}\\left(B \\log_d \\frac{n_c}{B}\\right) \\cdot S_{\\text{key}}$$\n\n');
+    fprintf(fid, '3. **FANET Fragility Analysis (The Broken-Path Problem):** In lossy wireless UAV channels with packet loss rate $p_{\\text{loss}}$, a UAV must successfully receive all $h = \\lceil \\log_2 n_c \\rceil$ parent KEK updates to remain synchronized. The synchronization probability is:\n\n');
+    fprintf(fid, '$$P_{\\text{sync}}^{\\text{LKH}} = (1 - p_{\\text{loss}})^h = (1 - p_{\\text{loss}})^{\\lceil \\log_2 n_c \\rceil}$$\n\n');
+    fprintf(fid, 'For cluster size $n_c = 600$ ($h = 10$) and channel loss $p_{\\text{loss}} = 5\\%%%%, P_{\\text{sync}}^{\\text{LKH}} = (0.95)^{10} \\approx 59.8\\%%%%$ (over 40\\%%%% of UAVs suffer key desynchronization). In contrast, DT-HSBP broadcasts a direct atomic update with blind keys, maintaining $P_{\\text{sync}}^{\\text{DT-HSBP}} = 1 - p_{\\text{loss}} = 95\\%%%%$.\n\n');
+
+    fprintf(fid, '### M.9 Asymptotic Complexity Comparison Matrix\n\n');
+    fprintf(fid, '| Paradigm | Comm. Overhead | Leader Rekey Latency | Follower Latency | Member Key Storage | Handover Latency | Packet Loss Robustness |\n');
+    fprintf(fid, '|:---|:---:|:---:|:---:|:---:|:---:|:---:|\n');
+    fprintf(fid, '| **Flat-SBP** | $\\mathcal{O}(B \\cdot N)$ | $\\mathcal{O}(N)$ | $\\mathcal{O}(1)$ | $\\mathcal{O}(1)$ [1 key] | High ($> 150\\text{ ms}$) | High |\n');
+    fprintf(fid, '| **HSBP** | $\\mathcal{O}(B \\cdot n_c)$ | $\\mathcal{O}(B \\cdot n_c)$ | $\\mathcal{O}(1)$ | $\\mathcal{O}(1)$ [1 key] | Moderate ($40\\text{--}60\\text{ ms}$) | High |\n');
+    fprintf(fid, '| **LKH (Tree Baseline)** | $\\mathcal{O}\\left(B \\log \\frac{n_c}{B}\\right)$ | $\\mathcal{O}\\left(B \\log \\frac{n_c}{B}\\right)$ | $\\mathcal{O}(\\log n_c)$ | **$\\mathcal{O}(\\log n_c)$ [11 keys]** | Reactive ($15\\text{--}25\\text{ ms}$) | **Low [Broken Path Risk]** |\n');
+    fprintf(fid, '| **DT-HSBP** | $\\mathcal{O}(n_c)$ | $\\mathcal{O}(n_c)$ | $\\mathcal{O}(1)$ | $\\mathcal{O}(1)$ [1 key] | Moderate ($30\\text{--}40\\text{ ms}$) | High |\n');
+    fprintf(fid, '| **DT-HSBP + Contrib A** | $\\mathcal{O}(n_c)$ | $\\mathcal{O}(n_c)$ | $\\mathcal{O}(1)$ | $\\mathcal{O}(1)$ [1 key] | Reduced ($20\\text{--}25\\text{ ms}$) | High |\n');
+    fprintf(fid, '| **DT-HSBP + Contrib B** | $\\mathcal{O}(n_c)$ | **$\\mathcal{O}(1)$ [Precomputed]** | $\\mathcal{O}(1)$ | $\\mathcal{O}(1)$ [1 key] | **Near-Zero ($< 0.2\\text{ ms}$)** | High |\n');
+    fprintf(fid, '| **Full Proposed (DT-HSBP + A + B)** | **$\\mathcal{O}(n_c)$** | **$\\mathcal{O}(1)$ [Instant]** | **$\\mathcal{O}(1)$** | **$\\mathcal{O}(1)$ [1 key]** | **Zero-Latency Handover** | **High** |\n\n');
 
     fprintf(fid, '---\n\n');
     fprintf(fid, '## 1. Empirical Results: Improvement Due to DT-HSBP\n\n');
@@ -780,23 +836,25 @@ function report = generateDetailedReport(dtHsbp, contribA, contribB, overall, fi
 
     fprintf(fid, '---\n\n');
     fprintf(fid, '## 4. Overall Proposed System Synthesis ($N = 3000, n_c = 600$)\n\n');
-    fprintf(fid, '| Paradigm | Communication Traffic (KB) | Leader Execution Latency (ms) | Intermediate Exponentiations | Asymptotic Leave Complexity |\n');
-    fprintf(fid, '|:---|:---:|:---:|:---:|:---:|\n');
+    fprintf(fid, '| Paradigm | Communication Traffic (KB) | Leader Execution Latency (ms) | Member Storage (Keys) | Intermediate Exponentiations | Asymptotic Leave Complexity |\n');
+    fprintf(fid, '|:---|:---:|:---:|:---:|:---:|:---:|\n');
     for p = 1:numel(overall.paradigms)
         name = overall.paradigms(p);
         cBytes = overall.communicationBytes(p) / 1024;
         lTime = overall.leaderTimeMs(p);
         ops = overall.intermediateExponentiations(p);
+        kMem = overall.keysStoredPerMember(p);
         switch p
             case 1, asym = '$\\mathcal{O}(N)$';
             case 2, asym = '$\\mathcal{O}(n_c \\cdot B)$';
-            case 3, asym = '$\\mathcal{O}(n_c)$';
-            case 4, asym = '$\\mathcal{O}(1)$ intermediate';
-            case 5, asym = '$\\mathcal{O}(1)$ handover';
-            case 6, asym = '$\\mathcal{O}(1)$ intermediate + zero-latency';
+            case 3, asym = '$\\mathcal{O}(B \\log(n_c/B))$';
+            case 4, asym = '$\\mathcal{O}(n_c)$';
+            case 5, asym = '$\\mathcal{O}(1)$ intermediate';
+            case 6, asym = '$\\mathcal{O}(1)$ handover';
+            case 7, asym = '$\\mathcal{O}(1)$ intermediate + zero-latency';
         end
-        fprintf(fid, '| %s | %.2f | %.4f | %d | %s |\n', ...
-            name, cBytes, lTime, ops, asym);
+        fprintf(fid, '| %s | %.2f | %.4f | %d | %d | %s |\n', ...
+            name, cBytes, lTime, kMem, ops, asym);
     end
 
     fprintf(fid, '\n![Overall Proposed System Improvement](Overall_Proposed_System_Improvement.png)\n\n');

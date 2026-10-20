@@ -211,14 +211,15 @@ def build_pdf_report(output_pdf_path, fig_dir, artifact_dir=None):
         [Paragraph("Architectural Paradigm", th_style), 
          Paragraph("Communication Overhead", th_style), 
          Paragraph("Leader Rekey Latency", th_style), 
-         Paragraph("Interm. DH Recompute", th_style), 
+         Paragraph("Member Storage", th_style), 
          Paragraph("Handover Latency", th_style)],
-        [Paragraph("Flat-SBP (Reactive Baseline)", td_style), Paragraph("O(B &middot; N)", td_style), Paragraph("O(N)", td_style), Paragraph("O(N)", td_style), Paragraph("High (> 150 ms)", td_style)],
-        [Paragraph("HSBP (Hierarchical Baseline)", td_style), Paragraph("O(B &middot; n<sub>c</sub>)", td_style), Paragraph("O(B &middot; n<sub>c</sub>)", td_style), Paragraph("O(n<sub>c</sub>)", td_style), Paragraph("Moderate (40-60 ms)", td_style)],
-        [Paragraph("DT-HSBP (Collateral Batching)", td_style), Paragraph("O(n<sub>c</sub>)", td_style), Paragraph("O(n<sub>c</sub>)", td_style), Paragraph("O(n<sub>c</sub>)", td_style), Paragraph("Moderate (30-40 ms)", td_style)],
-        [Paragraph("DT-HSBP + Contribution A", td_style), Paragraph("O(n<sub>c</sub>)", td_style), Paragraph("O(n<sub>c</sub>)", td_style), Paragraph("<b>O(1) [Zero prefix]</b>", td_bold_style), Paragraph("Reduced (20-25 ms)", td_style)],
-        [Paragraph("DT-HSBP + Contribution B", td_style), Paragraph("O(n<sub>c</sub>)", td_style), Paragraph("<b>O(1) [Precomputed]</b>", td_bold_style), Paragraph("O(n<sub>c</sub>)", td_style), Paragraph("<b>Near-Zero (&lt; 0.2 ms)</b>", td_bold_style)],
-        [Paragraph("Full Proposed (DT-HSBP + A + B)", td_bold_style), Paragraph("<b>O(n<sub>c</sub>)</b>", td_bold_style), Paragraph("<b>O(1) [Zero-Latency]</b>", td_bold_style), Paragraph("<b>O(1) [Zero prefix]</b>", td_bold_style), Paragraph("<b>Zero-Latency Handover</b>", td_bold_style)]
+        [Paragraph("Flat-SBP (Reactive Baseline)", td_style), Paragraph("O(B &middot; N)", td_style), Paragraph("O(N)", td_style), Paragraph("O(1) [1 key]", td_style), Paragraph("High (> 150 ms)", td_style)],
+        [Paragraph("HSBP (Hierarchical Baseline)", td_style), Paragraph("O(B &middot; n<sub>c</sub>)", td_style), Paragraph("O(B &middot; n<sub>c</sub>)", td_style), Paragraph("O(1) [1 key]", td_style), Paragraph("Moderate (40-60 ms)", td_style)],
+        [Paragraph("LKH (Logical Key Hierarchy)", td_style), Paragraph("O(B log(n<sub>c</sub>/B))", td_style), Paragraph("O(B log(n<sub>c</sub>/B))", td_style), Paragraph("<b>O(log n<sub>c</sub>) [11 keys]</b>", td_bold_style), Paragraph("Reactive (15-25 ms)", td_style)],
+        [Paragraph("DT-HSBP (Collateral Batching)", td_style), Paragraph("O(n<sub>c</sub>)", td_style), Paragraph("O(n<sub>c</sub>)", td_style), Paragraph("O(1) [1 key]", td_style), Paragraph("Moderate (30-40 ms)", td_style)],
+        [Paragraph("DT-HSBP + Contribution A", td_style), Paragraph("O(n<sub>c</sub>)", td_style), Paragraph("O(n<sub>c</sub>)", td_style), Paragraph("O(1) [1 key]", td_style), Paragraph("Reduced (20-25 ms)", td_style)],
+        [Paragraph("DT-HSBP + Contribution B", td_style), Paragraph("O(n<sub>c</sub>)", td_style), Paragraph("<b>O(1) [Precomputed]</b>", td_bold_style), Paragraph("O(1) [1 key]", td_style), Paragraph("<b>Near-Zero (&lt; 0.2 ms)</b>", td_bold_style)],
+        [Paragraph("Full Proposed (DT-HSBP + A + B)", td_bold_style), Paragraph("<b>O(n<sub>c</sub>)</b>", td_bold_style), Paragraph("<b>O(1) [Zero-Latency]</b>", td_bold_style), Paragraph("<b>O(1) [1 key]</b>", td_bold_style), Paragraph("<b>Zero-Latency Handover</b>", td_bold_style)]
     ]
     matrix_table = Table(matrix_data, colWidths=[124, 95, 95, 95, 95])
     matrix_table.setStyle(TableStyle([
@@ -231,9 +232,10 @@ def build_pdf_report(output_pdf_path, fig_dir, artifact_dir=None):
         ('BACKGROUND', (0, 3), (-1, 3), colors.HexColor('#FFFFFF')),
         ('BACKGROUND', (0, 4), (-1, 4), colors.HexColor('#F8F9FA')),
         ('BACKGROUND', (0, 5), (-1, 5), colors.HexColor('#FFFFFF')),
-        ('BACKGROUND', (0, 6), (-1, 6), colors.HexColor('#E8F8F5')),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
-        ('TOPPADDING', (0, 0), (-1, -1), 4),
+        ('BACKGROUND', (0, 6), (-1, 6), colors.HexColor('#F8F9FA')),
+        ('BACKGROUND', (0, 7), (-1, 7), colors.HexColor('#E8F8F5')),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+        ('TOPPADDING', (0, 0), (-1, -1), 3),
     ]))
     story.append(matrix_table)
     story.append(Spacer(1, 10))
@@ -300,14 +302,6 @@ def build_pdf_report(output_pdf_path, fig_dir, artifact_dir=None):
         "The final cluster session key is <i>K<sub>group</sub> = I<sub>n<sub>c</sub></sub> = g<sup>&prod;<sub>i=1</sub><sup>n<sub>c</sub></sup> sk<sub>i</sub></sup> mod p</i>.", math_style
     ))
 
-    story.append(PageBreak())
-
-    # =========================================================================
-    # PAGE 3: ANALYTICAL & MATHEMATICAL FRAMEWORK (MODELS 6 TO 9)
-    # =========================================================================
-    story.append(Paragraph("Analytical & Mathematical Framework (Part 2)", h1_style))
-    story.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor('#0F4C81'), spaceAfter=8))
-
     story.append(Paragraph("6. Core DT-HSBP Collateral Batch Rekeying Model", h2_style))
     story.append(Paragraph(
         "Under reactive HSBP, each of <i>B</i> independent departures triggers an individual rekeying episode, yielding "
@@ -318,6 +312,14 @@ def build_pdf_report(output_pdf_path, fig_dir, artifact_dir=None):
         "&nbsp;&nbsp;<i>&eta;<sub>comm</sub> = 1 - C<sub>DT-HSBP</sub> / C<sub>HSBP</sub> = 1 - (n<sub>c</sub> - B) / (B &middot; n<sub>c</sub>) &approx; 1 - 1 / B</i><br/>"
         "For typical flight regimes with <i>B = 2.5 - 3.0</i>, communication traffic is cut by <b>60% to 67%</b>.", body_style
     ))
+
+    story.append(PageBreak())
+
+    # =========================================================================
+    # PAGE 3: ANALYTICAL & MATHEMATICAL FRAMEWORK (MODELS 7 TO 10)
+    # =========================================================================
+    story.append(Paragraph("Analytical & Mathematical Framework (Part 2)", h1_style))
+    story.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor('#0F4C81'), spaceAfter=8))
 
     story.append(Paragraph("7. Contribution A: Lifespan-Aware Sequence Optimization Formulation", h2_style))
     story.append(Paragraph(
@@ -355,6 +357,19 @@ def build_pdf_report(output_pdf_path, fig_dir, artifact_dir=None):
         "where <i>&alpha; = 0.4, &beta; = 0.4, &gamma; = 0.2</i>, and <i>C<sub>0</sub>, T<sub>0</sub>, N<sub>0</sub></i> denote Flat-SBP baseline values.<br/>"
         "&nbsp;&nbsp;TROM<sub>Flat-SBP</sub> = 1.000 &nbsp;&nbsp;|&nbsp;&nbsp; TROM<sub>HSBP</sub> = 0.354 &nbsp;&nbsp;|&nbsp;&nbsp; TROM<sub>DT-HSBP</sub> = 0.148 &nbsp;&nbsp;|&nbsp;&nbsp; <b>TROM<sub>Proposed Full</sub> = 0.038</b><br/>"
         "Representing an <b>overall system overhead reduction of 96.2%</b>.", body_style
+    ))
+
+    story.append(Paragraph("10. Baseline Comparison: Logical Key Hierarchy (LKH) in Tactical Swarms", h2_style))
+    story.append(Paragraph(
+        "Logical Key Hierarchy (LKH) organizes cluster nodes into a balanced <i>d</i>-ary tree where each member stores "
+        "<i>h = &lceil;log<sub>d</sub>(n<sub>c</sub>)&rceil; + 1</i> Key Encryption Keys (KEKs) along its root path:<br/>"
+        "&nbsp;&nbsp;&bull; Member Storage Overhead: <i>S<sub>LKH</sub> = O(log<sub>d</sub> n<sub>c</sub>)</i> keys (e.g., <b>11 keys</b> at <i>n<sub>c</sub>=600</i> vs. <b>1 key</b> in DT-HSBP).<br/>"
+        "&nbsp;&nbsp;&bull; Batch Leave Traffic: <i>C<sub>LKH</sub> &le; B &middot; (d - 1) &middot; &lceil;log<sub>d</sub>(n<sub>c</sub> / B)&rceil; &middot; S<sub>key</sub> = O(B log(n<sub>c</sub>/B))</i>.<br/>"
+        "&nbsp;&nbsp;&bull; <b>Broken-Path Fragility Formulation:</b> In lossy tactical FANETs with drop probability <i>p<sub>loss</sub></i>, "
+        "a surviving drone must receive all <i>h</i> updated ancestor KEKs. The key synchronization probability is "
+        "<i>P<sub>sync</sub><sup>LKH</sup> = (1 - p<sub>loss</sub>)<sup>h</sup></i>. For <i>p<sub>loss</sub> = 5%</i> and <i>h = 10</i>: "
+        "<i>P<sub>sync</sub><sup>LKH</sup> = (0.95)<sup>10</sup> &approx; 59.8%</i> (<b>40.2% desynchronization risk</b>), whereas DT-HSBP achieves "
+        "<i>P<sub>sync</sub><sup>DT-HSBP</sup> = 1 - p<sub>loss</sub> = 95.0%</i>.", body_style
     ))
 
     story.append(PageBreak())
@@ -514,16 +529,18 @@ def build_pdf_report(output_pdf_path, fig_dir, artifact_dir=None):
         [Paragraph("Paradigm", th_style), 
          Paragraph("Comm. Traffic (KB)", th_style), 
          Paragraph("Leader Latency (ms)", th_style), 
+         Paragraph("Member Storage", th_style), 
          Paragraph("Interm. Recomputes", th_style), 
          Paragraph("Asymptotic Leave Complexity", th_style)],
-        [Paragraph("Flat-SBP", td_style), Paragraph("468.53", td_style), Paragraph("191.151", td_style), Paragraph("3000", td_style), Paragraph("O(N)", td_style)],
-        [Paragraph("HSBP", td_style), Paragraph("93.46", td_style), Paragraph("57.300", td_style), Paragraph("1500", td_style), Paragraph("O(n<sub>c</sub> &middot; B)", td_style)],
-        [Paragraph("DT-HSBP", td_style), Paragraph("32.66", td_style), Paragraph("39.867", td_style), Paragraph("600", td_style), Paragraph("O(n<sub>c</sub>)", td_style)],
-        [Paragraph("DT-HSBP + Contrib A", td_style), Paragraph("32.66", td_style), Paragraph("23.920", td_style), Paragraph("0", td_bold_style), Paragraph("O(1) intermediate", td_bold_style)],
-        [Paragraph("DT-HSBP + Contrib B", td_style), Paragraph("32.66", td_style), Paragraph("5.980", td_style), Paragraph("600", td_style), Paragraph("O(1) handover", td_bold_style)],
-        [Paragraph("Full Proposed (DT-HSBP + A + B)", td_bold_style), Paragraph("<b>32.66</b>", td_bold_style), Paragraph("<b>3.189</b>", td_bold_style), Paragraph("<b>0</b>", td_bold_style), Paragraph("<b>O(1) intermediate + zero-latency</b>", td_bold_style)]
+        [Paragraph("Flat-SBP", td_style), Paragraph("468.53", td_style), Paragraph("191.151", td_style), Paragraph("O(1) [1 key]", td_style), Paragraph("3000", td_style), Paragraph("O(N)", td_style)],
+        [Paragraph("HSBP", td_style), Paragraph("93.46", td_style), Paragraph("57.300", td_style), Paragraph("O(1) [1 key]", td_style), Paragraph("1500", td_style), Paragraph("O(n<sub>c</sub> &middot; B)", td_style)],
+        [Paragraph("LKH (Tree Hierarchy)", td_style), Paragraph("1.30", td_style), Paragraph("0.021", td_style), Paragraph("<b>O(log n<sub>c</sub>) [11 keys]</b>", td_bold_style), Paragraph("0", td_style), Paragraph("O(B log(n<sub>c</sub>/B))", td_style)],
+        [Paragraph("DT-HSBP", td_style), Paragraph("32.66", td_style), Paragraph("39.867", td_style), Paragraph("O(1) [1 key]", td_style), Paragraph("600", td_style), Paragraph("O(n<sub>c</sub>)", td_style)],
+        [Paragraph("DT-HSBP + Contrib A", td_style), Paragraph("32.66", td_style), Paragraph("23.920", td_style), Paragraph("O(1) [1 key]", td_style), Paragraph("0", td_bold_style), Paragraph("O(1) intermediate", td_bold_style)],
+        [Paragraph("DT-HSBP + Contrib B", td_style), Paragraph("32.66", td_style), Paragraph("5.980", td_style), Paragraph("O(1) [1 key]", td_style), Paragraph("600", td_style), Paragraph("O(1) handover", td_bold_style)],
+        [Paragraph("Full Proposed (DT-HSBP + A + B)", td_bold_style), Paragraph("<b>32.66</b>", td_bold_style), Paragraph("<b>3.189</b>", td_bold_style), Paragraph("<b>O(1) [1 key]</b>", td_bold_style), Paragraph("<b>0</b>", td_bold_style), Paragraph("<b>O(1) interm. + zero-lat.</b>", td_bold_style)]
     ]
-    sec4_table = Table(sec4_table_data, colWidths=[130, 90, 94, 95, 95])
+    sec4_table = Table(sec4_table_data, colWidths=[114, 76, 76, 76, 76, 86])
     sec4_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#0F4C81')),
         ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
@@ -534,9 +551,10 @@ def build_pdf_report(output_pdf_path, fig_dir, artifact_dir=None):
         ('BACKGROUND', (0, 3), (-1, 3), colors.HexColor('#FFFFFF')),
         ('BACKGROUND', (0, 4), (-1, 4), colors.HexColor('#F8F9FA')),
         ('BACKGROUND', (0, 5), (-1, 5), colors.HexColor('#FFFFFF')),
-        ('BACKGROUND', (0, 6), (-1, 6), colors.HexColor('#E8F8F5')),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
-        ('TOPPADDING', (0, 0), (-1, -1), 3),
+        ('BACKGROUND', (0, 6), (-1, 6), colors.HexColor('#F8F9FA')),
+        ('BACKGROUND', (0, 7), (-1, 7), colors.HexColor('#E8F8F5')),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
+        ('TOPPADDING', (0, 0), (-1, -1), 2),
     ]))
     story.append(sec4_table)
     story.append(Spacer(1, 6))

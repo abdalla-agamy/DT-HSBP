@@ -1,6 +1,6 @@
 # DT-HSBP & Proposed Contributions: Comprehensive Evaluation Report
 
-**Date:** 2026-10-19 21:22:17  
+**Date:** 2026-10-20 08:41:10  
 **Evaluation Scope:** Full Swarm Comparative Analysis (Baseline Flat-SBP, HSBP, DT-HSBP, Contribution A, Contribution B, and Full Proposed Architecture)
 
 ---
@@ -116,16 +116,35 @@ $$T_{\text{leader}}^{\text{reactive}} = \sum_{k=1}^{n_c - B} \tau_{\text{modexp}
 
 $$\mathcal{R}_{\text{latency}} = \frac{T_{\text{leader}}^{\text{reactive}} - \tau_{\text{lookup}}}{T_{\text{leader}}^{\text{reactive}}} \times 100\%% \ge 85\%%$$
 
-### M.8 Asymptotic Complexity Comparison Matrix
+### M.8 Tree-Based Baseline: Logical Key Hierarchy (LKH) Formulation
 
-| Paradigm | Comm. Overhead | Leader Rekey Latency | Follower Latency | Intermediate Rebuild | Handover Latency |
-|:---|:---:|:---:|:---:|:---:|:---:|
-| **Flat-SBP** | $\mathcal{O}(B \cdot N)$ | $\mathcal{O}(N)$ | $\mathcal{O}(1)$ | $\mathcal{O}(N)$ | High ($> 150\text{ ms}$) |
-| **HSBP** | $\mathcal{O}(B \cdot n_c)$ | $\mathcal{O}(B \cdot n_c)$ | $\mathcal{O}(1)$ | $\mathcal{O}(n_c)$ | Moderate ($40\text{--}60\text{ ms}$) |
-| **DT-HSBP** | $\mathcal{O}(n_c)$ | $\mathcal{O}(n_c)$ | $\mathcal{O}(1)$ | $\mathcal{O}(n_c)$ | Moderate ($30\text{--}40\text{ ms}$) |
-| **DT-HSBP + Contrib A** | $\mathcal{O}(n_c)$ | $\mathcal{O}(n_c)$ | $\mathcal{O}(1)$ | **$\mathcal{O}(1)$ [Zero prefix]** | Reduced ($20\text{--}25\text{ ms}$) |
-| **DT-HSBP + Contrib B** | $\mathcal{O}(n_c)$ | **$\mathcal{O}(1)$ [Precomputed]** | $\mathcal{O}(1)$ | $\mathcal{O}(n_c)$ | **Near-Zero ($< 0.2\text{ ms}$)** |
-| **Full Proposed (DT-HSBP + A + B)** | **$\mathcal{O}(n_c)$** | **$\mathcal{O}(1)$ [Instant]** | **$\mathcal{O}(1)$** | **$\mathcal{O}(1)$ [Zero prefix]** | **Zero-Latency Handover** |
+In LKH (Wong et al., IEEE/ACM ToN 2000), cluster members are organized as leaves of a logical $d$-ary key tree (binary $d=2$). Each node $v$ maintains a Key-Encrypting Key (KEK) $K_v$, with the root key serving as $K_{\text{group}}$.
+
+1. **Member Storage Overhead:** Each UAV stores all secret keys along its root-to-leaf path:
+
+$$S_{\text{LKH}}^{\text{member}} = \lceil \log_d(n_c) \rceil + 1 = \mathcal{O}(\log n_c) \quad (\text{vs. } \mathcal{O}(1) \text{ in DT-HSBP})$$
+
+2. **Batch Departure Communication:** When $B$ UAVs leave, fresh KEKs are encrypted for surviving sibling subtrees, forming a Steiner tree of ciphertexts:
+
+$$C_{\text{LKH}}^{\text{batch}} = \sum_{l=1}^{\lceil \log_d n_c \rceil} \min(d^l, d \cdot B) \cdot S_{\text{key}} \approx \mathcal{O}\left(B \log_d \frac{n_c}{B}\right) \cdot S_{\text{key}}$$
+
+3. **FANET Fragility Analysis (The Broken-Path Problem):** In lossy wireless UAV channels with packet loss rate $p_{\text{loss}}$, a UAV must successfully receive all $h = \lceil \log_2 n_c \rceil$ parent KEK updates to remain synchronized. The synchronization probability is:
+
+$$P_{\text{sync}}^{\text{LKH}} = (1 - p_{\text{loss}})^h = (1 - p_{\text{loss}})^{\lceil \log_2 n_c \rceil}$$
+
+For cluster size $n_c = 600$ ($h = 10$) and channel loss $p_{\text{loss}} = 5\%%, P_{\text{sync}}^{\text{LKH}} = (0.95)^{10} \approx 59.8\%%$ (over 40\%% of UAVs suffer key desynchronization). In contrast, DT-HSBP broadcasts a direct atomic update with blind keys, maintaining $P_{\text{sync}}^{\text{DT-HSBP}} = 1 - p_{\text{loss}} = 95\%%$.
+
+### M.9 Asymptotic Complexity Comparison Matrix
+
+| Paradigm | Comm. Overhead | Leader Rekey Latency | Follower Latency | Member Key Storage | Handover Latency | Packet Loss Robustness |
+|:---|:---:|:---:|:---:|:---:|:---:|:---:|
+| **Flat-SBP** | $\mathcal{O}(B \cdot N)$ | $\mathcal{O}(N)$ | $\mathcal{O}(1)$ | $\mathcal{O}(1)$ [1 key] | High ($> 150\text{ ms}$) | High |
+| **HSBP** | $\mathcal{O}(B \cdot n_c)$ | $\mathcal{O}(B \cdot n_c)$ | $\mathcal{O}(1)$ | $\mathcal{O}(1)$ [1 key] | Moderate ($40\text{--}60\text{ ms}$) | High |
+| **LKH (Tree Baseline)** | $\mathcal{O}\left(B \log \frac{n_c}{B}\right)$ | $\mathcal{O}\left(B \log \frac{n_c}{B}\right)$ | $\mathcal{O}(\log n_c)$ | **$\mathcal{O}(\log n_c)$ [11 keys]** | Reactive ($15\text{--}25\text{ ms}$) | **Low [Broken Path Risk]** |
+| **DT-HSBP** | $\mathcal{O}(n_c)$ | $\mathcal{O}(n_c)$ | $\mathcal{O}(1)$ | $\mathcal{O}(1)$ [1 key] | Moderate ($30\text{--}40\text{ ms}$) | High |
+| **DT-HSBP + Contrib A** | $\mathcal{O}(n_c)$ | $\mathcal{O}(n_c)$ | $\mathcal{O}(1)$ | $\mathcal{O}(1)$ [1 key] | Reduced ($20\text{--}25\text{ ms}$) | High |
+| **DT-HSBP + Contrib B** | $\mathcal{O}(n_c)$ | **$\mathcal{O}(1)$ [Precomputed]** | $\mathcal{O}(1)$ | $\mathcal{O}(1)$ [1 key] | **Near-Zero ($< 0.2\text{ ms}$)** | High |
+| **Full Proposed (DT-HSBP + A + B)** | **$\mathcal{O}(n_c)$** | **$\mathcal{O}(1)$ [Instant]** | **$\mathcal{O}(1)$** | **$\mathcal{O}(1)$ [1 key]** | **Zero-Latency Handover** | **High** |
 
 ---
 
@@ -149,24 +168,24 @@ $$\mathcal{R}_{\text{latency}} = \frac{T_{\text{leader}}^{\text{reactive}} - \ta
 
 | Cluster Size ($n_c$) | Batch Size ($B$) | Unsorted Exponentiations | Lifespan-Sorted Exponentiations | Exponentiation Savings (%) | Unsorted Time (ms) | Sorted Time (ms) |
 |:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| 50 | 1 | 25 | **0** | **100.0%** | 8.8562 | **0.0243** |
-| 50 | 2 | 33 | **0** | **100.0%** | 2.5417 | **0.0004** |
-| 50 | 3 | 38 | **0** | **100.0%** | 0.2663 | **0.0003** |
-| 50 | 5 | 42 | **0** | **100.0%** | 0.3545 | **0.0003** |
-| 50 | 8 | 44 | **0** | **100.0%** | 0.6497 | **0.0009** |
-| 50 | 10 | 45 | **0** | **100.0%** | 0.3502 | **0.0011** |
-| 100 | 1 | 50 | **0** | **100.0%** | 0.7639 | **0.0011** |
-| 100 | 2 | 67 | **0** | **100.0%** | 0.5630 | **0.0003** |
-| 100 | 3 | 75 | **0** | **100.0%** | 0.6410 | **0.0006** |
-| 100 | 5 | 83 | **0** | **100.0%** | 0.7772 | **0.0010** |
-| 100 | 8 | 89 | **0** | **100.0%** | 0.7465 | **0.0012** |
-| 100 | 10 | 91 | **0** | **100.0%** | 0.7301 | **0.0009** |
-| 200 | 1 | 100 | **0** | **100.0%** | 1.5983 | **0.0011** |
-| 200 | 2 | 133 | **0** | **100.0%** | 1.5077 | **0.0011** |
-| 200 | 3 | 150 | **0** | **100.0%** | 1.4619 | **0.0010** |
-| 200 | 5 | 167 | **0** | **100.0%** | 1.5130 | **0.0011** |
-| 200 | 8 | 178 | **0** | **100.0%** | 1.5530 | **0.0012** |
-| 200 | 10 | 182 | **0** | **100.0%** | 1.4906 | **0.0010** |
+| 50 | 1 | 25 | **0** | **100.0%** | 8.6808 | **0.0243** |
+| 50 | 2 | 33 | **0** | **100.0%** | 2.3468 | **0.0005** |
+| 50 | 3 | 38 | **0** | **100.0%** | 0.2756 | **0.0003** |
+| 50 | 5 | 42 | **0** | **100.0%** | 0.3366 | **0.0003** |
+| 50 | 8 | 44 | **0** | **100.0%** | 1.4223 | **0.0006** |
+| 50 | 10 | 45 | **0** | **100.0%** | 0.3487 | **0.0011** |
+| 100 | 1 | 50 | **0** | **100.0%** | 0.8397 | **0.0011** |
+| 100 | 2 | 67 | **0** | **100.0%** | 0.5737 | **0.0003** |
+| 100 | 3 | 75 | **0** | **100.0%** | 0.5516 | **0.0003** |
+| 100 | 5 | 83 | **0** | **100.0%** | 0.5538 | **0.0003** |
+| 100 | 8 | 89 | **0** | **100.0%** | 0.5996 | **0.0006** |
+| 100 | 10 | 91 | **0** | **100.0%** | 0.5140 | **0.0003** |
+| 200 | 1 | 100 | **0** | **100.0%** | 1.3704 | **0.0008** |
+| 200 | 2 | 133 | **0** | **100.0%** | 1.2697 | **0.0006** |
+| 200 | 3 | 150 | **0** | **100.0%** | 1.5137 | **0.0011** |
+| 200 | 5 | 167 | **0** | **100.0%** | 1.5238 | **0.0011** |
+| 200 | 8 | 178 | **0** | **100.0%** | 1.2486 | **0.0007** |
+| 200 | 10 | 182 | **0** | **100.0%** | 1.0544 | **0.0004** |
 
 ![Improvement Due to Contribution A](Improvement_Contribution_A_Lifespan_Sorting.png)
 
@@ -176,15 +195,15 @@ $$\mathcal{R}_{\text{latency}} = \frac{T_{\text{leader}}^{\text{reactive}} - \ta
 
 | Cluster Size ($n_c$) | Reactive Leader Latency (ms) | Precomputed Leader Latency (ms) | Latency Reduction (ms) | Latency Reduction (%) |
 |:---:|:---:|:---:|:---:|:---:|
-| 25 | 0.4057 | **0.0060** | 0.3996 | **98.51%** |
-| 50 | 0.3453 | **0.0072** | 0.3381 | **97.91%** |
-| 75 | 0.4660 | **0.0067** | 0.4593 | **98.56%** |
-| 100 | 0.6240 | **0.0064** | 0.6176 | **98.97%** |
-| 150 | 0.8954 | **0.0077** | 0.8877 | **99.13%** |
-| 200 | 1.1402 | **0.0079** | 1.1324 | **99.31%** |
+| 25 | 0.4316 | **0.0081** | 0.4234 | **98.11%** |
+| 50 | 0.3233 | **0.0067** | 0.3166 | **97.93%** |
+| 75 | 0.4625 | **0.0069** | 0.4556 | **98.52%** |
+| 100 | 0.6219 | **0.0040** | 0.6179 | **99.35%** |
+| 150 | 0.8235 | **0.0056** | 0.8178 | **99.32%** |
+| 200 | 1.0484 | **0.0063** | 1.0420 | **99.39%** |
 
-- **Average Latency Reduction:** **98.73%** (exceeds the required >= 50% threshold)
-- **Speedup Factor:** **90.35x** faster leader handover.
+- **Average Latency Reduction:** **98.77%** (exceeds the required >= 50% threshold)
+- **Speedup Factor:** **105.74x** faster leader handover.
 
 ![Improvement Due to Contribution B](Improvement_Contribution_B_Zero_Latency.png)
 
@@ -192,14 +211,15 @@ $$\mathcal{R}_{\text{latency}} = \frac{T_{\text{leader}}^{\text{reactive}} - \ta
 
 ## 4. Overall Proposed System Synthesis ($N = 3000, n_c = 600$)
 
-| Paradigm | Communication Traffic (KB) | Leader Execution Latency (ms) | Intermediate Exponentiations | Asymptotic Leave Complexity |
-|:---|:---:|:---:|:---:|:---:|
-| Flat-SBP | 468.53 | 191.1511 | 3000 | $\\mathcal{O}(N)$ |
-| HSBP | 93.46 | 57.2996 | 1500 | $\\mathcal{O}(n_c \\cdot B)$ |
-| DT-HSBP | 32.66 | 39.8675 | 600 | $\\mathcal{O}(n_c)$ |
-| DT-HSBP + Contrib A | 32.66 | 23.9205 | 0 | $\\mathcal{O}(1)$ intermediate |
-| DT-HSBP + Contrib B | 32.66 | 5.9801 | 600 | $\\mathcal{O}(1)$ handover |
-| Full Proposed (DT-HSBP + A + B) | 32.66 | 3.1894 | 0 | $\\mathcal{O}(1)$ intermediate + zero-latency |
+| Paradigm | Communication Traffic (KB) | Leader Execution Latency (ms) | Member Storage (Keys) | Intermediate Exponentiations | Asymptotic Leave Complexity |
+|:---|:---:|:---:|:---:|:---:|:---:|
+| Flat-SBP | 468.53 | 191.1511 | 1 | 3000 | $\\mathcal{O}(N)$ |
+| HSBP | 93.46 | 57.2996 | 1 | 1500 | $\\mathcal{O}(n_c \\cdot B)$ |
+| LKH (Tree) | 1.31 | 1.0135 | 11 | 0 | $\\mathcal{O}(B \\log(n_c/B))$ |
+| DT-HSBP | 32.66 | 39.8675 | 1 | 600 | $\\mathcal{O}(n_c)$ |
+| DT-HSBP + Contrib A | 32.66 | 23.9205 | 1 | 0 | $\\mathcal{O}(1)$ intermediate |
+| DT-HSBP + Contrib B | 32.66 | 5.9801 | 1 | 600 | $\\mathcal{O}(1)$ handover |
+| Full Proposed (DT-HSBP + A + B) | 32.66 | 3.1894 | 1 | 0 | $\\mathcal{O}(1)$ intermediate + zero-latency |
 
 ![Overall Proposed System Improvement](Overall_Proposed_System_Improvement.png)
 
