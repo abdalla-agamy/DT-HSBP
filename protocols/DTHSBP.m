@@ -1,3 +1,25 @@
+% DTHSBP Digital Twin-Driven Hierarchical Scalable Batch Rekeying Protocol.
+%
+% Architecture & Contributions:
+%   1. Collateral Batch Rekeying: Proactively groups impending departures
+%      predicted by the Digital Twin into single atomic rekeying rounds.
+%   2. Contribution A (Lifespan-Aware Diffie-Hellman Chain Sorting):
+%      Dynamically sequences cluster members in descending order of remaining
+%      mission lifespan, guaranteeing departing nodes cluster at the tail
+%      and truncating intermediate chain recalculations from O(n_c) to O(1).
+%   3. Contribution B:
+%      Zero Cryptographic Application-Layer Transition Latency (eliminating
+%      application-layer cryptographic stall times, distinct from physical
+%      RF channel propagation and medium-access delays). Asynchronously
+%      pre-computes intermediate DH chains, blind keys, and group keys before
+%      flight transitions materialize.
+%
+% Evaluation Boundary Qualification:
+%   The evaluation focuses strictly on mission broadcast rekeying overhead
+%   within the operational channel, while Digital Twin telemetry is assumed
+%   to utilize standard periodic supervisory datalinks (e.g., MAVLink
+%   telemetry streams) with amortized background overhead.
+%
 classdef DTHSBP < HSBP
 
     properties
@@ -82,7 +104,7 @@ classdef DTHSBP < HSBP
             predictedLeaves = obj.collectPredictedLeaves(cluster, uavID);
             allDepartingIDs = unique([uavID, predictedLeaves]);
 
-            % Check precomputed key cache for zero-latency handover (Contribution B)
+            % Check precomputed key cache for zero cryptographic application-layer transition latency (Contribution B)
             cachedPackage = cluster.getPrecomputedKey(allDepartingIDs);
 
             for i = 1:numel(predictedLeaves)
@@ -156,7 +178,7 @@ classdef DTHSBP < HSBP
             predictedLeaves = obj.collectPredictedLeaves(cluster, uavID);
             allDepartingIDs = unique([uavID, predictedLeaves]);
 
-            % Check precomputed key cache for zero-latency handover (Contribution B)
+            % Check precomputed key cache for zero cryptographic application-layer transition latency (Contribution B)
             cachedPackage = cluster.getPrecomputedKey(allDepartingIDs);
 
             for i = 1:numel(predictedLeaves)

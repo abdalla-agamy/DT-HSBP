@@ -49,11 +49,14 @@ function pdfPath = generatePDFReport(dtHsbp, contribA, contribB, overall, figDir
         ' 2. Contribution A (Lifespan-Aware DH Chain Sequence Optimization): Orders cluster members dynamically in'
         '    descending order of predicted lifespan K_i = w1*E_i(t) - w2*S_i(t), mathematically clustering departing nodes'
         '    at the chain tail (k -> n_c). This drives intermediate DH recomputation overhead down from O(n_c) to O(1).'
-        ' 3. Contribution B (Predictive Pre-Calculation & Zero-Latency Handover): Asynchronously pre-computes intermediate'
-        '    DH chains and blind keys g^(I_i^{t+1}) mod p before flight transitions materialize, driving active leader'
-        '    handover execution latency down by over 87% (achieving near-zero latency).'
+        ' 3. Contribution B (Zero Cryptographic Latency): Eliminates application-layer cryptographic stall times'
+        '    (distinct from physical RF channel propagation and medium-access delays). Asynchronously pre-computes'
+        '    intermediate DH chains and blind keys before flight transitions materialize.'
+        ''
+        ' Boundary Qualification: Focuses strictly on mission broadcast rekeying overhead; DT telemetry utilizes'
+        ' standard periodic supervisory datalinks (e.g., MAVLink) with amortized background overhead.'
     };
-    text(0.08, 0.69, execSummaryText, 'FontSize', 10, 'LineStyle', 'none');
+    text(0.08, 0.69, execSummaryText, 'FontSize', 9.5, 'LineStyle', 'none');
 
     % Architectural comparison table box
     text(0.08, 0.56, 'System Architectural & Complexity Comparison Matrix', 'FontSize', 13, 'FontWeight', 'bold');
@@ -73,7 +76,7 @@ function pdfPath = generatePDFReport(dtHsbp, contribA, contribB, overall, figDir
         'DT-HSBP (Collateral Batching)', 'O(n_c)', 'O(n_c)', 'O(n_c)', 'Moderate'
         'DT-HSBP + Contribution A', 'O(n_c)', 'O(n_c)', 'O(1) [Zero prefix]', 'Reduced'
         'DT-HSBP + Contribution B', 'O(n_c)', 'O(1) [Precomputed]', 'O(n_c)', 'Near-Zero (< 0.2 ms)'
-        'Full Proposed (DT-HSBP + A + B)', 'O(n_c)', 'O(1) [Zero-Latency]', 'O(1) [Zero prefix]', 'Zero-Latency Handover'
+        'Full Proposed (DT-HSBP + A + B)', 'O(n_c)', 'O(1) [Instant]', 'O(1) [Zero prefix]', 'Zero Cryptographic Latency'
     };
     
     for r = 1:size(rows, 1)

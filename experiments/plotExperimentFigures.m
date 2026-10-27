@@ -129,3 +129,128 @@ function figures = plotExperimentFigures(report,eventType)
     xlim([min(swarmSizes) max(swarmSizes)]);
 
 end
+
+%% ======================================================================
+% PREDICTION ACCURACY SENSITIVITY PLOT (ETA SWEEP)
+% ======================================================================
+function f = plotPredictionAccuracySensitivity(etaData, figDir, artifactDir)
+%PLOTPREDICTIONACCURACYSENSITIVITY Plot Communication Overhead vs Prediction Accuracy (\eta)
+    if nargin < 2 || isempty(figDir)
+        figDir = fullfile(fileparts(fileparts(mfilename('fullpath'))), 'figures');
+    end
+    if nargin < 3 || isempty(artifactDir)
+        artifactDir = figDir;
+    end
+    if ~exist(figDir, 'dir'), mkdir(figDir); end
+
+    f = figure('Visible', 'off', 'Position', [100 100 800 500]);
+    
+    eta = etaData.eta;
+    dtBytes = etaData.dtHsbpBytes;
+    hsbpBytes = etaData.hsbpBytes;
+    lkhBytes = etaData.lkhBytes;
+    
+    % Colors
+    cDt = [0.18 0.62 0.18];
+    cHsbp = [0.85 0.33 0.10];
+    cLkh = [0.20 0.40 0.70];
+    
+    plot(eta, dtBytes, '-^', 'Color', cDt, 'LineWidth', 2.2, 'MarkerSize', 8, 'MarkerFaceColor', cDt); hold on;
+    plot(eta, hsbpBytes, '--s', 'Color', cHsbp, 'LineWidth', 2.0, 'MarkerSize', 8, 'MarkerFaceColor', cHsbp);
+    plot(eta, lkhBytes, '-.d', 'Color', cLkh, 'LineWidth', 2.0, 'MarkerSize', 8, 'MarkerFaceColor', cLkh);
+    
+    % Highlight default baseline eta = 0.85
+    xline(0.85, ':k', 'Baseline \eta = 0.85', 'LineWidth', 1.5, ...
+        'LabelVerticalAlignment', 'bottom', 'LabelHorizontalAlignment', 'center', ...
+        'FontSize', 9, 'FontWeight', 'bold');
+    
+    grid on; box on;
+    xlabel('DT Prediction Accuracy (\eta)', 'FontWeight', 'bold');
+    ylabel('Communication Overhead (Bytes)', 'FontWeight', 'bold');
+    title('Communication Overhead vs. Prediction Accuracy (\eta)', 'FontWeight', 'bold');
+    legend('DT-HSBP (Lifespan-Sorted)', 'Baseline HSBP (Unsorted Cascade)', 'LKH (Tree d=3)', ...
+        'Location', 'northeast');
+    xlim([min(eta) max(eta)]);
+    ylim([0 max([max(hsbpBytes), max(dtBytes), max(lkhBytes)]) * 1.15]);
+    
+    pngPath1 = fullfile(figDir, 'Prediction_Accuracy_Sensitivity_Eta.png');
+    try
+        exportgraphics(f, pngPath1, 'Resolution', 300);
+    catch
+        saveas(f, pngPath1);
+    end
+    fprintf('  Saved Figure: %s\n', pngPath1);
+
+    if ~strcmp(figDir, artifactDir) && exist(artifactDir, 'dir')
+        pngPath2 = fullfile(artifactDir, 'Prediction_Accuracy_Sensitivity_Eta.png');
+        try
+            copyfile(pngPath1, pngPath2);
+            fprintf('  Exported to Artifact: %s\n', pngPath2);
+        catch
+        end
+    end
+    close(f);
+end
+
+%% ======================================================================
+% BATCH-DEPARTURE SCALABILITY PLOT (M SIMULTANEOUS DEPARTURES)
+% ======================================================================
+function f = plotBatchDepartureScalability(batchData, figDir, artifactDir)
+%PLOTBATCHDEPARTURESCALABILITY Dual-subplot: Overhead vs M, Leader Time vs M
+    if nargin < 2 || isempty(figDir)
+        figDir = fullfile(fileparts(fileparts(mfilename('fullpath'))), 'figures');
+    end
+    if nargin < 3 || isempty(artifactDir)
+        artifactDir = figDir;
+    end
+    if ~exist(figDir, 'dir'), mkdir(figDir); end
+
+    f = figure('Visible', 'off', 'Position', [100 100 1000 450]);
+    M = batchData.M;
+
+    cDt = [0.18 0.62 0.18];
+    cHsbp = [0.85 0.33 0.10];
+    cLkh = [0.20 0.40 0.70];
+
+    % Subplot 1: Broadcast Communication Overhead vs M (KB)
+    subplot(1, 2, 1);
+    plot(M, batchData.DT_HSBP.bytes / 1024, '-^', 'Color', cDt, 'LineWidth', 2.2, 'MarkerSize', 8, 'MarkerFaceColor', cDt); hold on;
+    plot(M, batchData.HSBP.bytes / 1024, '--s', 'Color', cHsbp, 'LineWidth', 2.0, 'MarkerSize', 8, 'MarkerFaceColor', cHsbp);
+    plot(M, batchData.LKH.bytes / 1024, '-.d', 'Color', cLkh, 'LineWidth', 2.0, 'MarkerSize', 8, 'MarkerFaceColor', cLkh);
+    grid on; box on;
+    xlabel('Concurrent Departing Drones (M)', 'FontWeight', 'bold');
+    ylabel('Communication Overhead (KB)', 'FontWeight', 'bold');
+    title('(a) Batch Departure Communication Overhead', 'FontWeight', 'bold');
+    legend('DT-HSBP (Flat O(1) Broadcast)', 'Baseline HSBP (Cascade O(M \cdot n_c))', 'LKH (Tree Multi-Path)', 'Location', 'northwest');
+    xlim([min(M) max(M)]);
+
+    % Subplot 2: Leader Computation Time vs M (ms)
+    subplot(1, 2, 2);
+    plot(M, batchData.DT_HSBP.leaderMs, '-^', 'Color', cDt, 'LineWidth', 2.2, 'MarkerSize', 8, 'MarkerFaceColor', cDt); hold on;
+    plot(M, batchData.HSBP.leaderMs, '--s', 'Color', cHsbp, 'LineWidth', 2.0, 'MarkerSize', 8, 'MarkerFaceColor', cHsbp);
+    plot(M, batchData.LKH.leaderMs, '-.d', 'Color', cLkh, 'LineWidth', 2.0, 'MarkerSize', 8, 'MarkerFaceColor', cLkh);
+    grid on; box on;
+    xlabel('Concurrent Departing Drones (M)', 'FontWeight', 'bold');
+    ylabel('Leader Computation Time (ms)', 'FontWeight', 'bold');
+    title('(b) Leader Computation Time vs. Batch Size M', 'FontWeight', 'bold');
+    legend('DT-HSBP (Flat O(1) Prefix Cache)', 'Baseline HSBP (Sequential Cascade)', 'LKH (Symmetric Tree Encs)', 'Location', 'northwest');
+    xlim([min(M) max(M)]);
+
+    pngPath1 = fullfile(figDir, 'Batch_Departure_Scalability.png');
+    try
+        exportgraphics(f, pngPath1, 'Resolution', 300);
+    catch
+        saveas(f, pngPath1);
+    end
+    fprintf('  Saved Figure: %s\n', pngPath1);
+
+    if ~strcmp(figDir, artifactDir) && exist(artifactDir, 'dir')
+        pngPath2 = fullfile(artifactDir, 'Batch_Departure_Scalability.png');
+        try
+            copyfile(pngPath1, pngPath2);
+            fprintf('  Exported to Artifact: %s\n', pngPath2);
+        catch
+        end
+    end
+    close(f);
+end

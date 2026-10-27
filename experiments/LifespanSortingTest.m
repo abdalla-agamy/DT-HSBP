@@ -1,6 +1,7 @@
-function LifespanSortingTest()
+function results = LifespanSortingTest(eta)
 %LIFESPANSORTINGTEST Automated verification for Contribution A:
-% Lifespan-Aware Diffie-Hellman Chain Sequence Optimization in DT-HSBP.
+% Lifespan-Aware Diffie-Hellman Chain Sequence Optimization in DT-HSBP
+% with configurable empirical prediction accuracy parameter eta \in [0.5, 1.0].
 %
 % This test verifies:
 % 1. Estimated remaining mission lifespan L_i(t) and stability score S_i(t)
@@ -12,6 +13,16 @@ function LifespanSortingTest()
 %    tail of the sorted cluster array: [n_c-2, n_c-1, n_c].
 % 4. Batch leave rekey operates on the lifespan-sorted sequence, removing
 %    the tail cluster nodes and leaving the prefix DH chain sequence intact.
+% 5. Configurable prediction accuracy parameter eta:
+%    - With probability eta: tail truncation (k = N, O(1) overhead).
+%    - With probability 1 - eta: sudden interior failure k ~ U(1, N-1),
+%      triggering reactive cascade on the remaining (N - k) nodes.
+
+    if nargin < 1 || isempty(eta)
+        eta = 0.85; % Default baseline prediction accuracy
+    end
+    assert(eta >= 0.5 && eta <= 1.0, 'LifespanSortingTest:InvalidEta', ...
+        'Prediction accuracy eta must be in [0.5, 1.0].');
 
     rootDir = fileparts(fileparts(mfilename('fullpath')));
     addpath(genpath(rootDir));
@@ -182,9 +193,57 @@ function LifespanSortingTest()
         'LifespanSortingTest:SurvivingOrderMismatch', ...
         'Surviving members in leaveResult.affectedUAVs are not sorted by lifespan.');
 
+    %% 7. Empirical Prediction Accuracy Parameter (\eta) Verification
+    fprintf('\n--- Prediction Accuracy Parameter (\\eta = %.2f) Simulation ---\n', eta);
+    numEpisodes = 200;
+    tailTruncationCount = 0;
+    interiorCascadeCount = 0;
+    totalCascadeNodes = 0;
+    msgBytesPerEpisode = zeros(1, numEpisodes);
+    packetSizeBytes = cfg.packetSize;
+
+    clusterN = nc; % Number of nodes in cluster
+    rng(123); % Deterministic seed for repeatable episode validation
+    for ep = 1:numEpisodes
+        r = rand();
+        if r <= eta
+            % Successful DT hazard alignment: departing node at tail (k = clusterN)
+            tailTruncationCount = tailTruncationCount + 1;
+            % Tail truncation: O(1) prefix preserved, single broadcast packet
+            msgBytesPerEpisode(ep) = packetSizeBytes;
+        else
+            % Sudden unpredicted interior failure: k ~ U(1, clusterN - 1)
+            interiorCascadeCount = interiorCascadeCount + 1;
+            k = randi([1, clusterN - 1]);
+            affectedNodes = clusterN - k;
+            totalCascadeNodes = totalCascadeNodes + affectedNodes;
+            % Reactive cascade on (clusterN - k) nodes
+            msgBytesPerEpisode(ep) = affectedNodes * packetSizeBytes;
+        end
+    end
+
+    empiricalEta = tailTruncationCount / numEpisodes;
+    avgOverheadBytes = mean(msgBytesPerEpisode);
+    fprintf('  Simulated Episodes        : %d\n', numEpisodes);
+    fprintf('  Target Accuracy (\\eta)     : %.2f\n', eta);
+    fprintf('  Empirical Accuracy (\\eta)  : %.2f\n', empiricalEta);
+    fprintf('  Tail Truncations (O(1))   : %d\n', tailTruncationCount);
+    fprintf('  Interior Cascades         : %d\n', interiorCascadeCount);
+    fprintf('  Mean Comm Overhead (Bytes): %.1f\n', avgOverheadBytes);
+
+    assert(abs(empiricalEta - eta) < 0.10, ...
+        'LifespanSortingTest:EtaDeviation', ...
+        'Empirical prediction accuracy deviated excessively from target eta.');
+
+    results.eta = eta;
+    results.empiricalEta = empiricalEta;
+    results.tailTruncationCount = tailTruncationCount;
+    results.interiorCascadeCount = interiorCascadeCount;
+    results.avgOverheadBytes = avgOverheadBytes;
+
     fprintf('\n====================================================\n');
     fprintf('LifespanSortingTest PASSED successfully!\n');
-    fprintf('Tail clustering and O(1) tail truncation verified.\n');
+    fprintf('Tail clustering, O(1) truncation, and eta accuracy verified.\n');
     fprintf('====================================================\n');
 
 end

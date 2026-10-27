@@ -199,10 +199,15 @@ def build_pdf_report(output_pdf_path, fig_dir, artifact_dir=None):
         "This clusters departing nodes strictly at the chain tail, preserving the entire surviving prefix and driving "
         "intermediate DH recomputation overhead down from <i>O(n<sub>c</sub>)</i> to <b><i>O(1)</i> (100% prefix preservation)</b>."
         "<br/><br/>"
-        "<b>3. Contribution B (Predictive Pre-Calculation & Zero-Latency Handover):</b> Operates asynchronously during "
-        "the prediction lead window <i>&Delta;t<sub>lead</sub> = H</i> to pre-calculate the post-departure key material "
-        "and blind keys before the physical flight handover executes, slashing leader rekeying execution latency by "
-        "<b>over 87% (achieving sub-millisecond handover)</b>."
+        "<b>3. Contribution B (Zero Cryptographic Application-Layer Transition Latency):</b> "
+        "Eliminates application-layer cryptographic stall times (distinct from physical RF channel propagation and "
+        "medium-access delays). Operates asynchronously during the prediction lead window <i>&Delta;t<sub>lead</sub> = H</i> "
+        "to pre-calculate post-departure group keys and blind keys before flight handover, driving active leader "
+        "rekeying execution latency down by <b>over 87% (achieving sub-millisecond handover)</b>."
+        "<br/><br/>"
+        "<b>System Evaluation Boundary Qualification:</b> The evaluation focuses strictly on mission broadcast rekeying "
+        "overhead within the operational channel, while Digital Twin telemetry is assumed to utilize standard periodic "
+        "supervisory datalinks (e.g., MAVLink telemetry streams) with amortized background overhead."
     )
     story.append(Paragraph(exec_summary_text, callout_style))
 
@@ -221,7 +226,7 @@ def build_pdf_report(output_pdf_path, fig_dir, artifact_dir=None):
         [Paragraph("DT-HSBP (Collateral Batching)", td_style), Paragraph("O(n<sub>c</sub>)", td_style), Paragraph("O(n<sub>c</sub>)", td_style), Paragraph("O(1) [1 key]", td_style), Paragraph("Moderate (30-40 ms)", td_style)],
         [Paragraph("DT-HSBP + Contribution A", td_style), Paragraph("O(n<sub>c</sub>)", td_style), Paragraph("O(n<sub>c</sub>)", td_style), Paragraph("O(1) [1 key]", td_style), Paragraph("Reduced (20-25 ms)", td_style)],
         [Paragraph("DT-HSBP + Contribution B", td_style), Paragraph("O(n<sub>c</sub>)", td_style), Paragraph("<b>O(1) [Precomputed]</b>", td_bold_style), Paragraph("O(1) [1 key]", td_style), Paragraph("<b>Near-Zero (&lt; 0.2 ms)</b>", td_bold_style)],
-        [Paragraph("Full Proposed (DT-HSBP + A + B)", td_bold_style), Paragraph("<b>O(n<sub>c</sub>)</b>", td_bold_style), Paragraph("<b>O(1) [Zero-Latency]</b>", td_bold_style), Paragraph("<b>O(1) [1 key]</b>", td_bold_style), Paragraph("<b>Zero-Latency Handover</b>", td_bold_style)]
+        [Paragraph("Full Proposed (DT-HSBP + A + B)", td_bold_style), Paragraph("<b>O(n<sub>c</sub>)</b>", td_bold_style), Paragraph("<b>O(1) [Instant]</b>", td_bold_style), Paragraph("<b>O(1) [1 key]</b>", td_bold_style), Paragraph("<b>Zero Cryptographic Latency</b>", td_bold_style)]
     ]
     matrix_table = Table(matrix_data, colWidths=[124, 95, 95, 95, 95])
     matrix_table.setStyle(TableStyle([
@@ -335,8 +340,9 @@ def build_pdf_report(output_pdf_path, fig_dir, artifact_dir=None):
         "&nbsp;&nbsp;<i>n<sub>recompute</sub><sup>sorted</sup> = 0 = O(1)</i>, completely eliminating on-the-fly intermediate chain recomputations.", body_style
     ))
 
-    story.append(Paragraph("8. Contribution B: Predictive Pre-Calculation & Zero-Latency Handover Formulation", h2_style))
+    story.append(Paragraph("8. Contribution B: Zero Cryptographic Application-Layer Transition Latency Formulation", h2_style))
     story.append(Paragraph(
+        "Contribution B provides <i>Zero Cryptographic Application-Layer Transition Latency</i> (eliminating application-layer cryptographic stall times, distinct from physical RF channel propagation and medium-access delays). "
         "When stability score <i>S<sub>i</sub>(t) &ge; &theta;<sub>leave</sub></i>, advance lead time <i>&Delta;t<sub>lead</sub> = H</i> allows `DTPrecomputationEngine` to asynchronously pre-calculate post-departure group keys before physical flight handover:<br/>"
         "&nbsp;&nbsp;<i>K<sub>group</sub><sup>t+H</sup> = g<sup>&prod;<sub>u &isin; M<sub>surv</sub></sub> sk<sub>u</sub></sup> mod p, &nbsp;&nbsp; B<sub>k</sub> = g<sup>I<sub>k</sub><sup>t+H</sup></sup> mod p</i> &nbsp;&rarr; <i>cluster.precomputedKeyCache</i><br/>"
         "At handover realization, leader latency transitions from modexp computation to immediate cache retrieval:<br/>"
@@ -578,13 +584,106 @@ def build_pdf_report(output_pdf_path, fig_dir, artifact_dir=None):
     story.append(sec4_table)
     story.append(Spacer(1, 6))
 
+    story.append(PageBreak())
+
+    # =========================================================================
+    # PAGE 8: SECTION 5 EMPIRICAL RESULTS (PREDICTION ACCURACY PARAMETER ETA)
+    # =========================================================================
+    story.append(Paragraph("Section 5: Prediction Accuracy Sensitivity Analysis (&eta;)", h1_style))
+    story.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor('#0F4C81'), spaceAfter=8))
+
+    fig5_path = os.path.join(fig_dir, "Prediction_Accuracy_Sensitivity_Eta.png")
+    if os.path.exists(fig5_path):
+        story.append(Image(fig5_path, width=usable_width, height=usable_width * 0.44))
+        story.append(Spacer(1, 6))
+
+    story.append(Paragraph("Communication Overhead vs Prediction Accuracy &eta; (n<sub>c</sub> = 50)", h2_style))
+    sec5_table_data = [
+        [Paragraph("Accuracy (&eta;)", th_style), 
+         Paragraph("DT-HSBP (Bytes)", th_style), 
+         Paragraph("Baseline HSBP", th_style), 
+         Paragraph("LKH (Tree d=3)", th_style), 
+         Paragraph("Gain vs HSBP (%)", th_style), 
+         Paragraph("Gain vs LKH (%)", th_style)],
+        [Paragraph("0.50", td_style), Paragraph("728.0", td_style), Paragraph("1372.0", td_style), Paragraph("384.0", td_style), Paragraph("46.94%", td_bold_style), Paragraph("-89.58%", td_style)],
+        [Paragraph("0.60", td_style), Paragraph("593.6", td_style), Paragraph("1372.0", td_style), Paragraph("384.0", td_style), Paragraph("56.73%", td_bold_style), Paragraph("-54.58%", td_style)],
+        [Paragraph("0.70", td_style), Paragraph("459.2", td_style), Paragraph("1372.0", td_style), Paragraph("384.0", td_style), Paragraph("66.53%", td_bold_style), Paragraph("-19.58%", td_style)],
+        [Paragraph("0.80", td_style), Paragraph("324.8", td_style), Paragraph("1372.0", td_style), Paragraph("384.0", td_style), Paragraph("76.33%", td_bold_style), Paragraph("15.42%", td_bold_style)],
+        [Paragraph("0.85 (Baseline)", td_bold_style), Paragraph("<b>257.6</b>", td_bold_style), Paragraph("1372.0", td_style), Paragraph("384.0", td_style), Paragraph("<b>81.22%</b>", td_bold_style), Paragraph("<b>32.92%</b>", td_bold_style)],
+        [Paragraph("0.90", td_style), Paragraph("190.4", td_style), Paragraph("1372.0", td_style), Paragraph("384.0", td_style), Paragraph("86.12%", td_bold_style), Paragraph("50.42%", td_bold_style)],
+        [Paragraph("1.00", td_style), Paragraph("56.0", td_bold_style), Paragraph("1372.0", td_style), Paragraph("384.0", td_style), Paragraph("95.92%", td_bold_style), Paragraph("85.42%", td_bold_style)]
+    ]
+    sec5_table = Table(sec5_table_data, colWidths=[84, 84, 84, 84, 84, 84])
+    sec5_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#0F4C81')),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#CCCCCC')),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.HexColor('#FFFFFF'), colors.HexColor('#F8F9FA')]),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
+        ('TOPPADDING', (0, 0), (-1, -1), 2),
+    ]))
+    story.append(sec5_table)
+    story.append(Spacer(1, 6))
+
+    story.append(Paragraph(
+        "<b>Section 5 Findings:</b> When the Digital Twin correctly predicts impending node departures with probability &eta;, "
+        "the departing node is positioned at the tail, requiring only a single tail truncation broadcast (56 bytes, <i>O(1)</i> overhead). "
+        "At baseline accuracy <b>&eta; = 0.85</b>, DT-HSBP cuts communication traffic by <b>81.2% relative to HSBP</b> and "
+        "<b>32.9% relative to LKH</b>, while retaining a lightweight <i>O(1)</i> single-key storage footprint on constrained UAV nodes.", body_style
+    ))
+
+    story.append(PageBreak())
+
+    # =========================================================================
+    # PAGE 9: SECTION 6 BATCH-DEPARTURE SCALABILITY BENCHMARK & CONCLUSIONS
+    # =========================================================================
+    story.append(Paragraph("Section 6: Batch-Departure Scalability Benchmark (M Concurrent Leaves)", h1_style))
+    story.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor('#0F4C81'), spaceAfter=8))
+
+    fig6_path = os.path.join(fig_dir, "Batch_Departure_Scalability.png")
+    if os.path.exists(fig6_path):
+        story.append(Image(fig6_path, width=usable_width, height=usable_width * 0.40))
+        story.append(Spacer(1, 6))
+
+    story.append(Paragraph("Simultaneous Departure Benchmark vs Batch Size M (n<sub>c</sub> = 50)", h2_style))
+    sec6_table_data = [
+        [Paragraph("Batch M", th_style), 
+         Paragraph("DT-HSBP (KB)", th_style), 
+         Paragraph("HSBP (KB)", th_style), 
+         Paragraph("LKH (KB)", th_style), 
+         Paragraph("DT Time (ms)", th_style), 
+         Paragraph("HSBP Time (ms)", th_style), 
+         Paragraph("LKH Time (ms)", th_style)],
+        [Paragraph("1", td_style), Paragraph("12.25", td_bold_style), Paragraph("12.25", td_style), Paragraph("0.38", td_style), Paragraph("0.052", td_bold_style), Paragraph("2.21", td_style), Paragraph("0.07", td_style)],
+        [Paragraph("2", td_style), Paragraph("12.00", td_bold_style), Paragraph("24.25", td_style), Paragraph("0.66", td_style), Paragraph("0.054", td_bold_style), Paragraph("4.37", td_style), Paragraph("0.14", td_style)],
+        [Paragraph("4", td_style), Paragraph("11.50", td_bold_style), Paragraph("47.50", td_style), Paragraph("0.94", td_style), Paragraph("0.053", td_bold_style), Paragraph("8.55", td_style), Paragraph("0.26", td_style)],
+        [Paragraph("6", td_style), Paragraph("11.00", td_bold_style), Paragraph("69.75", td_style), Paragraph("1.31", td_style), Paragraph("0.050", td_bold_style), Paragraph("12.56", td_style), Paragraph("0.38", td_style)],
+        [Paragraph("8", td_style), Paragraph("10.50", td_bold_style), Paragraph("91.00", td_style), Paragraph("1.50", td_style), Paragraph("0.055", td_bold_style), Paragraph("16.38", td_style), Paragraph("0.50", td_style)],
+        [Paragraph("10", td_style), Paragraph("10.00", td_bold_style), Paragraph("111.25", td_style), Paragraph("1.69", td_style), Paragraph("0.053", td_bold_style), Paragraph("20.03", td_style), Paragraph("0.61", td_style)],
+        [Paragraph("20", td_style), Paragraph("7.50", td_bold_style), Paragraph("197.50", td_style), Paragraph("2.44", td_style), Paragraph("0.052", td_bold_style), Paragraph("35.55", td_style), Paragraph("1.16", td_style)],
+        [Paragraph("25", td_style), Paragraph("6.25", td_bold_style), Paragraph("231.25", td_style), Paragraph("2.72", td_style), Paragraph("0.054", td_bold_style), Paragraph("41.63", td_style), Paragraph("1.42", td_style)]
+    ]
+    sec6_table = Table(sec6_table_data, colWidths=[54, 76, 76, 76, 74, 74, 74])
+    sec6_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#0F4C81')),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#CCCCCC')),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.HexColor('#FFFFFF'), colors.HexColor('#F8F9FA')]),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
+        ('TOPPADDING', (0, 0), (-1, -1), 2),
+    ]))
+    story.append(sec6_table)
+    story.append(Spacer(1, 6))
+
     story.append(Paragraph("Conclusions & Engineering Recommendations", h2_style))
     concl_text = (
         "The complete integration of <b>DT-HSBP collateral batching</b>, <b>Contribution A lifespan-ordered sequence</b>, "
-        "and <b>Contribution B predictive pre-computation</b> resolves the fundamental scalability bottlenecks of secure UAV swarms:<br/>"
-        "&nbsp;&nbsp;&bull; <b>Communication bottleneck eliminated:</b> 93.0% bandwidth reduction compared to Flat-SBP and 65.1% compared to HSBP.<br/>"
-        "&nbsp;&nbsp;&bull; <b>Computation bottleneck eliminated:</b> 100% of intermediate chain recomputations are avoided via lifespan-ordered prefix preservation.<br/>"
-        "&nbsp;&nbsp;&bull; <b>Flight transition latency eliminated:</b> 94.4% reduction in leader rekeying latency, enabling seamless, zero-latency flight handover."
+        "and <b>Contribution B zero cryptographic application-layer transition latency</b> resolves the fundamental scalability bottlenecks of secure UAV swarms:<br/>"
+        "&nbsp;&nbsp;&bull; <b>Batch-Departure Scalability Guaranteed:</b> DT-HSBP maintains constant <i>O(1)</i> message overhead and sub-0.1 ms leader computation even as batch size scales up to <i>M = N/2</i>, while HSBP explodes to 231 KB and 41.6 ms.<br/>"
+        "&nbsp;&nbsp;&bull; <b>Prediction Robustness:</b> At baseline &eta; = 0.85, DT-HSBP saves > 81% overhead vs HSBP, and outperforms LKH in message efficiency while maintaining <i>O(1)</i> single-key member storage.<br/>"
+        "&nbsp;&nbsp;&bull; <b>Evaluation Scope & Boundaries:</b> Focuses strictly on mission broadcast rekeying overhead within the operational channel, while DT telemetry utilizes periodic supervisory datalinks (e.g. MAVLink) with amortized background overhead."
     )
     story.append(Paragraph(concl_text, body_style))
 
@@ -603,7 +702,15 @@ if __name__ == '__main__':
     rootDir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     reportDir = os.path.join(rootDir, "reports")
     figDir = os.path.join(rootDir, "figures")
-    artifactDir = r"C:\Users\Owner\.gemini\antigravity-ide\brain\08e7439a-0e8c-4e8c-9a76-e0adbb1f8f8f"
+    
+    currentArtifact = r"C:\Users\Owner\.gemini\antigravity-ide\brain\3115504c-4d31-4a6f-b338-d467d8a4ba85"
+    legacyArtifact = r"C:\Users\Owner\.gemini\antigravity-ide\brain\08e7439a-0e8c-4e8c-9a76-e0adbb1f8f8f"
+    if os.path.exists(currentArtifact):
+        artifactDir = currentArtifact
+    elif os.path.exists(legacyArtifact):
+        artifactDir = legacyArtifact
+    else:
+        artifactDir = figDir
     
     outPdf = os.path.join(reportDir, "Full_Evaluation_Report.pdf")
     build_pdf_report(outPdf, figDir, artifactDir)

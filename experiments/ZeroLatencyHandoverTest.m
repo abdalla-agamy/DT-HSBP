@@ -1,6 +1,14 @@
 function ZeroLatencyHandoverTest()
 %ZEROLATENCYHANDOVERTEST Automated verification for Contribution B:
-% Predictive Pre-Calculation & Zero-Latency Rekeying Handover.
+% Zero Cryptographic Application-Layer Transition Latency
+% (eliminating application-layer cryptographic stall times, distinct from
+% physical RF channel propagation and medium-access delays).
+%
+% Boundary Qualification:
+% The evaluation focuses strictly on mission broadcast rekeying overhead
+% within the operational channel, while Digital Twin telemetry is assumed
+% to utilize standard periodic supervisory datalinks (e.g., MAVLink
+% telemetry streams) with amortized background overhead.
 %
 % This test verifies:
 % 1. DTPrecomputationEngine intercepts prediction events and pre-calculates
@@ -16,7 +24,7 @@ function ZeroLatencyHandoverTest()
     addpath(genpath(rootDir));
 
     fprintf('=================================================================\n');
-    fprintf('Contribution B Test: Predictive Pre-Calculation & Zero-Latency\n');
+    fprintf('Contribution B Test: Zero Cryptographic Application-Layer Latency\n');
     fprintf('=================================================================\n');
 
     %% 1. Swarm & Configuration Setup

@@ -59,6 +59,13 @@ $$\bar{X} = \frac{1}{R} \sum_{r=1}^R X_r, \quad s^2 = \frac{1}{R-1} \sum_{r=1}^R
 - Message overhead (headers + control metadata): $b_{\text{hdr}}$ bytes
 - Total packet size per rekey message: $b = b_{\text{hdr}} + b_k = 56$ bytes
 
+> [!IMPORTANT]
+> **Evaluation Boundary Qualification:**
+> The evaluation focuses strictly on mission broadcast rekeying overhead within the operational channel, while Digital Twin telemetry is assumed to utilize standard periodic supervisory datalinks (e.g., MAVLink telemetry streams) with amortized background overhead.
+>
+> **Contribution B Scope (Zero-Latency Handover):**
+> Scoped explicitly as *Zero Cryptographic Application-Layer Transition Latency (eliminating application-layer cryptographic stall times, distinct from physical RF channel propagation and medium-access delays)* via predictive asynchronous pre-calculation.
+
 ### 2.2 Mathematical Communication Cost Model ($C_{\text{comm}}$)
 
 #### A. Flat-SBP Baseline
