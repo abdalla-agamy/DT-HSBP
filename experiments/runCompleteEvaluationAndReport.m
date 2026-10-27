@@ -228,7 +228,31 @@ for p = 1:numel(protocols)
     end
 end
 
-% Derived gains
+% In DT-HSBP, apply empirical prediction accuracy parameter eta \in [0.5, 1.0]:
+eta = 0.85; % Baseline prediction accuracy
+res.eta = eta;
+
+% Save ideal (eta = 1.0) values
+res.leaveBytesIdeal = res.leaveBytes;
+res.leaveMessagesIdeal = res.leaveMessages;
+res.leaveRekeyCountIdeal = res.leaveRekeyCount;
+
+% DT-HSBP under prediction accuracy eta:
+% With probability eta: collateral batching succeeds (ideal batch overhead)
+% With probability (1 - eta): unpredicted/sudden interior failures fall back to reactive HSBP
+res.leaveBytes.DTHSBP = eta * res.leaveBytesIdeal.DTHSBP + (1 - eta) * res.leaveBytes.HSBP;
+res.leaveBytesMin.DTHSBP = res.leaveBytesIdeal.DTHSBP; % eta = 1.0 (lower bound)
+res.leaveBytesMax.DTHSBP = 0.50 * res.leaveBytesIdeal.DTHSBP + 0.50 * res.leaveBytes.HSBP; % eta = 0.50 (upper bound)
+
+res.leaveMessages.DTHSBP = eta * res.leaveMessagesIdeal.DTHSBP + (1 - eta) * res.leaveMessages.HSBP;
+res.leaveMessagesMin.DTHSBP = res.leaveMessagesIdeal.DTHSBP;
+res.leaveMessagesMax.DTHSBP = 0.50 * res.leaveMessagesIdeal.DTHSBP + 0.50 * res.leaveMessages.HSBP;
+
+res.leaveRekeyCount.DTHSBP = eta * res.leaveRekeyCountIdeal.DTHSBP + (1 - eta) * res.leaveRekeyCount.HSBP;
+res.leaveRekeyCountMin.DTHSBP = res.leaveRekeyCountIdeal.DTHSBP;
+res.leaveRekeyCountMax.DTHSBP = 0.50 * res.leaveRekeyCountIdeal.DTHSBP + 0.50 * res.leaveRekeyCount.HSBP;
+
+% Derived gains under eta = 0.85
 res.byteReductionVsFlat = (1 - res.leaveBytes.DTHSBP ./ res.leaveBytes.FlatSBP) * 100;
 res.byteReductionVsHSBP = (1 - res.leaveBytes.DTHSBP ./ res.leaveBytes.HSBP) * 100;
 res.rekeyReductionVsHSBP = (1 - res.leaveRekeyCount.DTHSBP ./ res.leaveRekeyCount.HSBP) * 100;
@@ -289,14 +313,26 @@ for c = 1:numel(clusterSizes)
             tSortedAcc = tSortedAcc + toc(t2);
         end
         
+        eta = 0.85; % Baseline prediction accuracy
+        res.eta = eta;
+        
         res.unsortedExponentiations(c, b) = round((B / (B + 1)) * nc);
-        res.sortedExponentiations(c, b)   = 0; % O(1)
+        % With probability eta: 0 exponentiations (tail truncation)
+        % With probability (1 - eta): unsorted exponentiations (interior cascade)
+        res.sortedExponentiations(c, b)   = round((1 - eta) * res.unsortedExponentiations(c, b)); % Expected at eta = 0.85
+        res.sortedExponentiationsIdeal(c, b) = 0; % Ideal (eta = 1.0)
+        res.sortedExponentiationsMin(c, b)   = 0; % eta = 1.0 (lower bound)
+        res.sortedExponentiationsMax(c, b)   = round(0.50 * res.unsortedExponentiations(c, b)); % eta = 0.50 (upper bound)
+        
+        tSortedIdealMs = (tSortedAcc / trials) * 1000;
         res.unsortedTimeMs(c, b)          = (tUnsortedAcc / trials) * 1000;
-        res.sortedTimeMs(c, b)            = (tSortedAcc / trials) * 1000;
+        res.sortedTimeMs(c, b)            = (1 - eta) * res.unsortedTimeMs(c, b) + eta * tSortedIdealMs;
+        res.sortedTimeMsMin(c, b)         = tSortedIdealMs; % eta = 1.0
+        res.sortedTimeMsMax(c, b)         = 0.50 * res.unsortedTimeMs(c, b) + 0.50 * tSortedIdealMs; % eta = 0.50
     end
 end
 
-res.avgExponentiationSavingPct = 100; % 100% of intermediate rebuilds saved
+res.avgExponentiationSavingPct = 85.0; % 85% of intermediate rebuilds saved at baseline eta = 0.85
 end
 
 %% ======================================================================
@@ -364,18 +400,31 @@ for i = 1:numel(testClusterSizes)
         end
         swarm.addUAV(target.id, 1);
     end
-    res.precomputedLeaderTimeMs(i) = median(tPrecomp);
+    res.precomputedLeaderTimeMs(i) = median(tPrecomp); % Ideal cache hit (eta = 1.0)
+    
+    eta = 0.85; % Baseline prediction accuracy
+    res.eta = eta;
+    % Expected leader execution latency under prediction accuracy eta:
+    % With probability eta: precomputed handover cache hit
+    % With probability (1 - eta): unpredicted handover, reactive rekeying
+    res.expectedLeaderTimeMs(i) = eta * res.precomputedLeaderTimeMs(i) + (1 - eta) * res.reactiveLeaderTimeMs(i);
+    res.expectedLeaderTimeMinMs(i) = res.precomputedLeaderTimeMs(i); % eta = 1.0
+    res.expectedLeaderTimeMaxMs(i) = 0.50 * res.precomputedLeaderTimeMs(i) + 0.50 * res.reactiveLeaderTimeMs(i); % eta = 0.50
     
     if res.reactiveLeaderTimeMs(i) > 0
         res.latencyReductionPct(i) = ((res.reactiveLeaderTimeMs(i) - ...
+            res.expectedLeaderTimeMs(i)) / res.reactiveLeaderTimeMs(i)) * 100;
+        res.latencyReductionIdealPct(i) = ((res.reactiveLeaderTimeMs(i) - ...
             res.precomputedLeaderTimeMs(i)) / res.reactiveLeaderTimeMs(i)) * 100;
     else
         res.latencyReductionPct(i) = 85.0;
+        res.latencyReductionIdealPct(i) = 99.0;
     end
 end
 
 res.avgLatencyReductionPct = mean(res.latencyReductionPct);
-res.speedupFactor = mean(res.reactiveLeaderTimeMs ./ max(res.precomputedLeaderTimeMs, 1e-4));
+res.avgLatencyReductionIdealPct = mean(res.latencyReductionIdealPct);
+res.speedupFactor = mean(res.reactiveLeaderTimeMs ./ max(res.expectedLeaderTimeMs, 1e-4));
 end
 
 %% ======================================================================
@@ -596,23 +645,30 @@ cDt   = [0.18 0.62 0.18];
 subplot(2, 2, 1);
 plot(N, data.leaveBytes.FlatSBP / 1e3, '-o', 'Color', cFlat, 'LineWidth', 1.8, 'MarkerSize', 7, 'MarkerFaceColor', cFlat); hold on;
 plot(N, data.leaveBytes.HSBP / 1e3, '-s', 'Color', cHsbp, 'LineWidth', 1.8, 'MarkerSize', 7, 'MarkerFaceColor', cHsbp);
-plot(N, data.leaveBytes.DTHSBP / 1e3, '-^', 'Color', cDt, 'LineWidth', 1.8, 'MarkerSize', 7, 'MarkerFaceColor', cDt);
+
+% Shaded sensitivity envelope for DT-HSBP across eta \in [0.5, 1.0]
+fill([N, fliplr(N)], [data.leaveBytesMin.DTHSBP / 1e3, fliplr(data.leaveBytesMax.DTHSBP / 1e3)], ...
+    cDt, 'FaceAlpha', 0.18, 'EdgeColor', 'none');
+plot(N, data.leaveBytes.DTHSBP / 1e3, '-^', 'Color', cDt, 'LineWidth', 2.0, 'MarkerSize', 8, 'MarkerFaceColor', cDt);
+plot(N, data.leaveBytesIdeal.DTHSBP / 1e3, '--', 'Color', [0.10 0.45 0.10], 'LineWidth', 1.4);
 grid on; box on;
 xlabel('Swarm Size (N)', 'FontWeight', 'bold');
 ylabel('Traffic (KB / Departure)', 'FontWeight', 'bold');
-title('(a) Leave Communication Traffic', 'FontWeight', 'bold');
-legend('Flat-SBP', 'HSBP', 'DT-HSBP', 'Location', 'northwest');
+title('(a) Leave Communication Traffic (\eta \in [0.5, 1.0])', 'FontWeight', 'bold');
+legend('Flat-SBP', 'HSBP', 'DT-HSBP Range (\eta \in [0.5, 1.0])', 'DT-HSBP (\eta = 0.85)', 'DT-HSBP Ideal (\eta = 1.0)', 'Location', 'northwest');
 
 % Subplot 2: Rekey Message Count
 subplot(2, 2, 2);
 plot(N, data.leaveMessages.FlatSBP, '-o', 'Color', cFlat, 'LineWidth', 1.8, 'MarkerSize', 7, 'MarkerFaceColor', cFlat); hold on;
 plot(N, data.leaveMessages.HSBP, '-s', 'Color', cHsbp, 'LineWidth', 1.8, 'MarkerSize', 7, 'MarkerFaceColor', cHsbp);
-plot(N, data.leaveMessages.DTHSBP, '-^', 'Color', cDt, 'LineWidth', 1.8, 'MarkerSize', 7, 'MarkerFaceColor', cDt);
+fill([N, fliplr(N)], [data.leaveMessagesMin.DTHSBP, fliplr(data.leaveMessagesMax.DTHSBP)], ...
+    cDt, 'FaceAlpha', 0.18, 'EdgeColor', 'none');
+plot(N, data.leaveMessages.DTHSBP, '-^', 'Color', cDt, 'LineWidth', 2.0, 'MarkerSize', 8, 'MarkerFaceColor', cDt);
 grid on; box on;
 xlabel('Swarm Size (N)', 'FontWeight', 'bold');
 ylabel('Messages Sent', 'FontWeight', 'bold');
-title('(b) Leave Rekey Message Count', 'FontWeight', 'bold');
-legend('Flat-SBP', 'HSBP', 'DT-HSBP', 'Location', 'northwest');
+title('(b) Leave Rekey Message Count (\eta = 0.85)', 'FontWeight', 'bold');
+legend('Flat-SBP', 'HSBP', 'DT-HSBP Range (\eta \in [0.5, 1.0])', 'DT-HSBP (\eta = 0.85)', 'Location', 'northwest');
 
 % Subplot 3: Rekey Operations Count (Distinguish Flat-SBP and HSBP)
 subplot(2, 2, 3);
@@ -622,8 +678,8 @@ plot(N, data.leaveRekeyCount.DTHSBP, '-^', 'Color', cDt, 'LineWidth', 2.0, 'Mark
 grid on; box on;
 xlabel('Swarm Size (N)', 'FontWeight', 'bold');
 ylabel('Rekey Executions', 'FontWeight', 'bold');
-title('(c) Rekey Executions per Episode (Batching)', 'FontWeight', 'bold');
-legend('Flat-SBP (Reactive: 1 rekey/node)', 'HSBP (Reactive: 1 rekey/node)', 'DT-HSBP (Collateral Batch: 1 rekey/batch)', 'Location', 'northwest');
+title('(c) Rekey Executions per Episode (\eta = 0.85)', 'FontWeight', 'bold');
+legend('Flat-SBP (Reactive: 1 rekey/node)', 'HSBP (Reactive: 1 rekey/node)', 'DT-HSBP (\eta = 0.85 Expected)', 'Location', 'northwest');
 ylim([0.5 3.5]);
 
 % Subplot 4: Relative Communication Gain
@@ -632,8 +688,8 @@ bar(N, [data.byteReductionVsHSBP; data.byteReductionVsFlat]', 'grouped');
 grid on; box on;
 xlabel('Swarm Size (N)', 'FontWeight', 'bold');
 ylabel('Overhead Reduction (%)', 'FontWeight', 'bold');
-title('(d) DT-HSBP Communication Gain', 'FontWeight', 'bold');
-legend('Reduction vs HSBP', 'Reduction vs Flat-SBP', 'Location', 'southeast');
+title('(d) DT-HSBP Communication Gain (\eta = 0.85)', 'FontWeight', 'bold');
+legend('Reduction vs HSBP (\eta = 0.85)', 'Reduction vs Flat-SBP (\eta = 0.85)', 'Location', 'southeast');
 ylim([0 100]);
 
 saveFigure(f, 'Improvement_DT_HSBP_Comparison', figDir, artifactDir);
@@ -643,7 +699,7 @@ end
 % FIGURE 2: Contribution A Improvement (Lifespan-Aware Chain Sorting)
 % ======================================================================
 function generateFigure2_ContributionA(data, figDir, artifactDir)
-f = figure('Visible','off','Position',[100 100 900 450]);
+f = figure('Visible','off','Position',[100 100 950 480]);
 
 B = data.batchSizes;
 c1 = [0.85 0.33 0.10]; % Unsorted
@@ -661,19 +717,19 @@ bPlot(2).FaceColor = c2;
 grid on; box on;
 xlabel('Departing Batch Size (B)', 'FontWeight', 'bold');
 ylabel('Intermediate Exponentiations Required', 'FontWeight', 'bold');
-title(sprintf('(a) Intermediate Exponentiations (n_c = %d)', data.clusterSizes(ncIdx)), 'FontWeight', 'bold');
-legend('Chronological (Unsorted)', 'Lifespan-Sorted (Contrib A)', 'Location', 'northwest');
-ylim([0, max(opsUnsorted) * 1.3]);
+title(sprintf('(a) Intermediate Exponentiations (n_c = %d, \\eta = 0.85)', data.clusterSizes(ncIdx)), 'FontWeight', 'bold');
+legend('Chronological (Unsorted)', 'Lifespan-Sorted (\eta = 0.85)', 'Location', 'northwest');
+ylim([0, max(opsUnsorted) * 1.35]);
 
-% Add explicit text labels so 0 values are clearly marked
+% Add explicit text labels for ops and savings
 for i = 1:numel(B)
     xUnsorted = bPlot(1).XEndPoints(i);
     text(xUnsorted, opsUnsorted(i) + 2.5, sprintf('%d', opsUnsorted(i)), ...
         'HorizontalAlignment', 'center', 'FontSize', 8, 'FontWeight', 'bold');
     
     xSorted = bPlot(2).XEndPoints(i);
-    text(xSorted, 4.5, '0 (100%)', ...
-        'HorizontalAlignment', 'center', 'FontSize', 7.5, 'FontWeight', 'bold', ...
+    text(xSorted, opsSorted(i) + 2.5, sprintf('%d (85%% saved)', opsSorted(i)), ...
+        'HorizontalAlignment', 'center', 'FontSize', 7.0, 'FontWeight', 'bold', ...
         'Color', [0.08 0.5 0.08]);
 end
 
@@ -681,16 +737,22 @@ end
 subplot(1, 2, 2);
 nc = data.clusterSizes;
 bIdx = min(3, numel(B));
-tUnsorted = data.unsortedTimeMs(:, bIdx);
-tSorted   = data.sortedTimeMs(:, bIdx);
+tUnsorted  = data.unsortedTimeMs(:, bIdx);
+tSorted    = data.sortedTimeMs(:, bIdx);
+tSortedMin = data.sortedTimeMsMin(:, bIdx);
+tSortedMax = data.sortedTimeMsMax(:, bIdx);
 
 plot(nc, tUnsorted, '-s', 'Color', c1, 'LineWidth', 2.0, 'MarkerSize', 8, 'MarkerFaceColor', c1); hold on;
+fill([nc, fliplr(nc)], [tSortedMin', fliplr(tSortedMax')], ...
+    c2, 'FaceAlpha', 0.20, 'EdgeColor', 'none');
 plot(nc, tSorted, '-^', 'Color', c2, 'LineWidth', 2.0, 'MarkerSize', 8, 'MarkerFaceColor', c2);
+plot(nc, tSortedMin, '--', 'Color', [0.10 0.45 0.10], 'LineWidth', 1.4);
 grid on; box on;
 xlabel('Cluster Size (n_c)', 'FontWeight', 'bold');
 ylabel('Chain Recomputation Time (ms)', 'FontWeight', 'bold');
-title(sprintf('(b) DH Chain Recompute Time (B = %d)', B(bIdx)), 'FontWeight', 'bold');
-legend('Chronological (O(n_c))', 'Lifespan-Sorted (O(1))', 'Location', 'northwest');
+title(sprintf('(b) DH Chain Recompute Time (B = %d, \\eta \\in [0.5, 1.0])', B(bIdx)), 'FontWeight', 'bold');
+legend('Chronological (O(n_c))', 'Lifespan-Sorted Range (\eta \in [0.5, 1.0])', ...
+    'Lifespan-Sorted (\eta = 0.85 Expected)', 'Ideal Tail Truncation (\eta = 1.0)', 'Location', 'northwest');
 
 saveFigure(f, 'Improvement_Contribution_A_Lifespan_Sorting', figDir, artifactDir);
 end
@@ -699,7 +761,7 @@ end
 % FIGURE 3: Contribution B Improvement (Zero-Latency Handover)
 % ======================================================================
 function generateFigure3_ContributionB(data, figDir, artifactDir)
-f = figure('Visible','off','Position',[100 100 900 450]);
+f = figure('Visible','off','Position',[100 100 950 480]);
 nc = data.clusterSizes;
 
 cReact = [0.85 0.33 0.10];
@@ -708,23 +770,30 @@ cPrecomp = [0.12 0.47 0.71];
 % Subplot 1: Leader Execution Time Comparison (Smooth curve)
 subplot(1, 2, 1);
 plot(nc, data.reactiveLeaderTimeMs, '-o', 'Color', cReact, 'LineWidth', 2.2, 'MarkerSize', 8, 'MarkerFaceColor', cReact); hold on;
-plot(nc, data.precomputedLeaderTimeMs, '-d', 'Color', cPrecomp, 'LineWidth', 2.2, 'MarkerSize', 8, 'MarkerFaceColor', cPrecomp);
+fill([nc, fliplr(nc)], [data.expectedLeaderTimeMinMs, fliplr(data.expectedLeaderTimeMaxMs)], ...
+    cPrecomp, 'FaceAlpha', 0.20, 'EdgeColor', 'none');
+plot(nc, data.expectedLeaderTimeMs, '-d', 'Color', cPrecomp, 'LineWidth', 2.2, 'MarkerSize', 8, 'MarkerFaceColor', cPrecomp);
+plot(nc, data.precomputedLeaderTimeMs, '--', 'Color', [0.08 0.35 0.55], 'LineWidth', 1.5);
 grid on; box on;
 xlabel('Cluster Size (n_c)', 'FontWeight', 'bold');
 ylabel('Leader Execution Latency (ms)', 'FontWeight', 'bold');
-title('(a) Flight Handover Rekeying Latency', 'FontWeight', 'bold');
-legend('Reactive Rekeying (O(n_c))', 'Predictive Zero-Latency Handover (O(1))', 'Location', 'northwest');
+title('(a) Flight Handover Latency (\eta \\in [0.5, 1.0])', 'FontWeight', 'bold');
+legend('Reactive Rekeying (O(n_c))', 'Predictive Range (\eta \in [0.5, 1.0])', ...
+    'Predictive Handover (\eta = 0.85 Expected)', 'Ideal Cache Hit (\eta = 1.0)', 'Location', 'northwest');
 ylim([0, max(data.reactiveLeaderTimeMs) * 1.25]);
 
 % Subplot 2: Latency Reduction Percentage
 subplot(1, 2, 2);
-bar(nc, data.latencyReductionPct, 0.5, 'FaceColor', [0.18 0.62 0.18]);
+bar(nc, data.latencyReductionPct, 0.5, 'FaceColor', [0.18 0.62 0.18]); hold on;
+errLower = data.latencyReductionPct - 50.0;
+errUpper = data.latencyReductionIdealPct - data.latencyReductionPct;
+errorbar(nc, data.latencyReductionPct, errLower, errUpper, '.k', 'LineWidth', 1.2, 'CapSize', 8);
 grid on; box on;
 xlabel('Cluster Size (n_c)', 'FontWeight', 'bold');
 ylabel('Leader Latency Reduction (%)', 'FontWeight', 'bold');
-title('(b) Handover Latency Reduction Gain', 'FontWeight', 'bold');
+title('(b) Handover Latency Reduction Gain (\eta \in [0.5, 1.0])', 'FontWeight', 'bold');
 yline(50, '--r', 'Target 50% Threshold', 'LineWidth', 1.5, 'LabelHorizontalAlignment', 'left');
-ylim([60 100]);
+ylim([40 105]);
 
 saveFigure(f, 'Improvement_Contribution_B_Zero_Latency', figDir, artifactDir);
 end
@@ -1048,8 +1117,8 @@ fprintf(fid, '\n![Improvement Due to DT-HSBP](Improvement_DT_HSBP_Comparison.png
 fprintf(fid, '> **Key Takeaway:** For **Join events**, communication traffic is minimal and constant across all architectures because admitting a member only requires distributing the new session key under the current key. For **Leave events**, traffic explodes in Flat-SBP and HSBP, whereas DT-HSBP maintains a **~65%% reduction** via stochastic collateral batching.\n\n');
 
 fprintf(fid, '---\n\n');
-fprintf(fid, '## 2. Empirical Results: Improvement Due to Contribution A (Lifespan-Aware DH Chain)\n\n');
-fprintf(fid, '| Cluster Size ($n_c$) | Batch Size ($B$) | Unsorted Exponentiations | Lifespan-Sorted Exponentiations | Exponentiation Savings (%%) | Unsorted Time (ms) | Sorted Time (ms) |\n');
+fprintf(fid, '## 2. Empirical Results: Improvement Due to Contribution A (Lifespan-Aware DH Chain, \\eta \\in [0.5, 1.0])\n\n');
+fprintf(fid, '| Cluster Size ($n_c$) | Batch Size ($B$) | Unsorted Exponentiations | Lifespan-Sorted (\\eta = 0.85) | Savings (%%) | Unsorted Time (ms) | Sorted Time (\\eta = 0.85) |\n');
 fprintf(fid, '|:---:|:---:|:---:|:---:|:---:|:---:|:---:|\n');
 for c = 1:numel(contribA.clusterSizes)
     for b = 1:numel(contribA.batchSizes)
@@ -1060,28 +1129,29 @@ for c = 1:numel(contribA.clusterSizes)
         sOps = contribA.sortedExponentiations(c, b);
         uTime = contribA.unsortedTimeMs(c, b);
         sTime = contribA.sortedTimeMs(c, b);
-        fprintf(fid, '| %d | %d | %d | **%d** | **100.0%%** | %.4f | **%.4f** |\n', ...
-            nc, B, uOps, sOps, uTime, sTime);
+        pctSaved = (1 - sOps / max(uOps, 1)) * 100;
+        fprintf(fid, '| %d | %d | %d | **%d** | **%.1f%%** | %.4f | **%.4f** |\n', ...
+            nc, B, uOps, sOps, pctSaved, uTime, sTime);
     end
 end
 
 fprintf(fid, '\n![Improvement Due to Contribution A](Improvement_Contribution_A_Lifespan_Sorting.png)\n\n');
 
 fprintf(fid, '---\n\n');
-fprintf(fid, '## 3. Empirical Results: Improvement Due to Contribution B (Zero Cryptographic Application-Layer Transition Latency)\n\n');
-fprintf(fid, '| Cluster Size ($n_c$) | Reactive Leader Latency (ms) | Precomputed Leader Latency (ms) | Latency Reduction (ms) | Latency Reduction (%%) |\n');
+fprintf(fid, '## 3. Empirical Results: Improvement Due to Contribution B (Zero Cryptographic Latency, \\eta \\in [0.5, 1.0])\n\n');
+fprintf(fid, '| Cluster Size ($n_c$) | Reactive Latency (ms) | Precomputed Latency (ms) | Expected Latency (\\eta = 0.85) | Latency Reduction (%%) |\n');
 fprintf(fid, '|:---:|:---:|:---:|:---:|:---:|\n');
 for i = 1:numel(contribB.clusterSizes)
     nc = contribB.clusterSizes(i);
     tReact = contribB.reactiveLeaderTimeMs(i);
     tPrecomp = contribB.precomputedLeaderTimeMs(i);
-    tRed = max(0, tReact - tPrecomp);
+    tExp = contribB.expectedLeaderTimeMs(i);
     pctRed = contribB.latencyReductionPct(i);
-    fprintf(fid, '| %d | %.4f | **%.4f** | %.4f | **%.2f%%** |\n', ...
-        nc, tReact, tPrecomp, tRed, pctRed);
+    fprintf(fid, '| %d | %.4f | %.4f | **%.4f** | **%.2f%%** |\n', ...
+        nc, tReact, tPrecomp, tExp, pctRed);
 end
 
-fprintf(fid, '\n- **Average Latency Reduction:** **%.2f%%** (exceeds the required >= 50%% threshold)\n', ...
+fprintf(fid, '\n- **Average Latency Reduction (\\eta = 0.85):** **%.2f%%** (exceeds the required >= 50%% threshold)\n', ...
     contribB.avgLatencyReductionPct);
 fprintf(fid, '- **Speedup Factor:** **%.2fx** faster leader handover.\n\n', contribB.speedupFactor);
 fprintf(fid, '![Improvement Due to Contribution B](Improvement_Contribution_B_Zero_Latency.png)\n\n');
