@@ -196,14 +196,14 @@ def build_pdf_report(output_pdf_path, fig_dir, artifact_dir=None):
         "<br/><br/>"
         "<b>2. Contribution A (Lifespan-Aware Sequence Optimization):</b> Dynamically sequences cluster members "
         "in descending order of predicted lifespan <i>K<sub>i</sub> = w<sub>1</sub>E<sub>i</sub>(t) - w<sub>2</sub>S<sub>i</sub>(t)</i>. "
-        "This clusters departing nodes strictly at the chain tail, preserving the entire surviving prefix and driving "
-        "intermediate DH recomputation overhead down from <i>O(n<sub>c</sub>)</i> to <b><i>O(1)</i> (100% prefix preservation)</b>."
+        "Under realistic prediction accuracy &eta; &isin; [0.5, 1.0] (baseline &eta; = 0.85), departing nodes cluster at the chain tail "
+        "with probability &eta;, driving intermediate DH recomputation overhead down by <b>~85%</b> (and up to <b>100% prefix preservation</b> at &eta; = 1.0)."
         "<br/><br/>"
         "<b>3. Contribution B (Zero Cryptographic Application-Layer Transition Latency):</b> "
         "Eliminates application-layer cryptographic stall times (distinct from physical RF channel propagation and "
         "medium-access delays). Operates asynchronously during the prediction lead window <i>&Delta;t<sub>lead</sub> = H</i> "
         "to pre-calculate post-departure group keys and blind keys before flight handover, driving active leader "
-        "rekeying execution latency down by <b>over 87% (achieving sub-millisecond handover)</b>."
+        "rekeying execution latency down by <b>~84% at &eta; = 0.85 (achieving sub-millisecond handover)</b>."
         "<br/><br/>"
         "<b>System Evaluation Boundary Qualification:</b> The evaluation focuses strictly on mission broadcast rekeying "
         "overhead within the operational channel, while Digital Twin telemetry is assumed to utilize standard periodic "
@@ -248,12 +248,12 @@ def build_pdf_report(output_pdf_path, fig_dir, artifact_dir=None):
     story.append(matrix_table)
     story.append(Spacer(1, 10))
 
-    story.append(Paragraph("Empirical Highlights Across Swarm Scale (N = 3000):", h2_style))
-    story.append(Paragraph("&bull; <b>Communication Traffic Reduction vs HSBP:</b> <b>65.06%</b> (32.66 KB vs 93.46 KB)", bullet_style))
-    story.append(Paragraph("&bull; <b>Communication Traffic Reduction vs Flat-SBP:</b> <b>93.03%</b> (32.66 KB vs 468.53 KB)", bullet_style))
-    story.append(Paragraph("&bull; <b>Leader Execution Latency Reduction vs HSBP:</b> <b>94.43%</b> (3.19 ms vs 57.30 ms)", bullet_style))
-    story.append(Paragraph("&bull; <b>Intermediate Exponentiations Saved along Chain:</b> <b>100% prefix reuse</b> (eliminating on-the-fly modexps)", bullet_style))
-    story.append(Paragraph("&bull; <b>Predictive Handover Acceleration:</b> <b>&gt; 87% latency reduction</b> across flight transitions", bullet_style))
+    story.append(Paragraph("Empirical Highlights Across Swarm Scale (N = 3000, Baseline &eta; = 0.85):", h2_style))
+    story.append(Paragraph("&bull; <b>Communication Traffic Reduction vs HSBP:</b> <b>55.30%</b> (41.78 KB vs 93.46 KB at &eta;=0.85; 65.06% at &eta;=1.0)", bullet_style))
+    story.append(Paragraph("&bull; <b>Communication Traffic Reduction vs Flat-SBP:</b> <b>91.08%</b> (41.78 KB vs 468.53 KB)", bullet_style))
+    story.append(Paragraph("&bull; <b>Leader Execution Latency Reduction vs HSBP:</b> <b>92.46%</b> (4.14 ms vs 54.91 ms)", bullet_style))
+    story.append(Paragraph("&bull; <b>Intermediate Exponentiations Saved along Chain:</b> <b>85.0% expected reduction</b> at &eta;=0.85 (100% prefix reuse at &eta;=1.0)", bullet_style))
+    story.append(Paragraph("&bull; <b>Predictive Handover Acceleration:</b> <b>83.91% average latency reduction</b> across flight transitions", bullet_style))
 
     story.append(PageBreak())
 
@@ -546,7 +546,8 @@ def build_pdf_report(output_pdf_path, fig_dir, artifact_dir=None):
         story.append(Image(fig4_path, width=usable_width, height=usable_width * 0.48))
         story.append(Spacer(1, 8))
 
-    story.append(Paragraph("Holistic Architectural Benchmark Matrix (N = 3000 Swarm Size)", h2_style))
+    story.append(Paragraph("Holistic Architectural Benchmark Matrix (N = 3000 Swarm Size, n<sub>c</sub> = 600, &eta; = 0.85)", h2_style))
+
     sec4_table_data = [
         [Paragraph("Paradigm", th_style), 
          Paragraph("Comm. Traffic (KB)", th_style), 
@@ -554,14 +555,14 @@ def build_pdf_report(output_pdf_path, fig_dir, artifact_dir=None):
          Paragraph("Member Storage", th_style), 
          Paragraph("Interm. Recomputes", th_style), 
          Paragraph("Asymptotic Leave Complexity", th_style)],
-        [Paragraph("Flat-SBP", td_style), Paragraph("468.53", td_style), Paragraph("191.151", td_style), Paragraph("O(1) [1 key]", td_style), Paragraph("3000", td_style), Paragraph("O(N)", td_style)],
-        [Paragraph("HSBP", td_style), Paragraph("93.46", td_style), Paragraph("57.300", td_style), Paragraph("O(1) [1 key]", td_style), Paragraph("1500", td_style), Paragraph("O(n<sub>c</sub> &middot; B)", td_style)],
-        [Paragraph("LKH (d=3)", td_style), Paragraph("2.53", td_style), Paragraph("2.035", td_style), Paragraph("<b>O(log<sub>d</sub> n<sub>c</sub>) [7 keys]</b>", td_bold_style), Paragraph("0", td_style), Paragraph("O(B log<sub>d</sub> n<sub>c</sub>)", td_style)],
-        [Paragraph("TGDH (Tree DH)", td_style), Paragraph("3.75", td_style), Paragraph("5.709", td_style), Paragraph("<b>O(log<sub>2</sub> n<sub>c</sub>) [21 keys]</b>", td_bold_style), Paragraph("60", td_style), Paragraph("O(B log<sub>2</sub> n<sub>c</sub>) [Rounds]", td_style)],
-        [Paragraph("DT-HSBP", td_style), Paragraph("32.66", td_style), Paragraph("39.867", td_style), Paragraph("O(1) [1 key]", td_style), Paragraph("600", td_style), Paragraph("O(n<sub>c</sub>)", td_style)],
-        [Paragraph("DT-HSBP + Contrib A", td_style), Paragraph("32.66", td_style), Paragraph("23.920", td_style), Paragraph("O(1) [1 key]", td_style), Paragraph("0", td_bold_style), Paragraph("O(1) intermediate", td_bold_style)],
-        [Paragraph("DT-HSBP + Contrib B", td_style), Paragraph("32.66", td_style), Paragraph("5.980", td_style), Paragraph("O(1) [1 key]", td_style), Paragraph("600", td_style), Paragraph("O(1) handover", td_bold_style)],
-        [Paragraph("Full Proposed (DT-HSBP + A + B)", td_bold_style), Paragraph("<b>32.66</b>", td_bold_style), Paragraph("<b>3.189</b>", td_bold_style), Paragraph("<b>O(1) [1 key]</b>", td_bold_style), Paragraph("<b>0</b>", td_bold_style), Paragraph("<b>O(1) interm. + zero-lat.</b>", td_bold_style)]
+        [Paragraph("Flat-SBP", td_style), Paragraph("468.53", td_style), Paragraph("182.664", td_style), Paragraph("O(1) [1 key]", td_style), Paragraph("3000", td_style), Paragraph("O(N)", td_style)],
+        [Paragraph("HSBP", td_style), Paragraph("93.46", td_style), Paragraph("54.912", td_style), Paragraph("O(1) [1 key]", td_style), Paragraph("1500", td_style), Paragraph("O(n<sub>c</sub> &middot; B)", td_style)],
+        [Paragraph("LKH (d=3)", td_style), Paragraph("2.53", td_style), Paragraph("1.590", td_style), Paragraph("<b>O(log<sub>d</sub> n<sub>c</sub>) [7 keys]</b>", td_bold_style), Paragraph("0", td_style), Paragraph("O(B log<sub>d</sub> n<sub>c</sub>)", td_style)],
+        [Paragraph("TGDH (Tree DH)", td_style), Paragraph("3.75", td_style), Paragraph("5.606", td_style), Paragraph("<b>O(log<sub>2</sub> n<sub>c</sub>) [21 keys]</b>", td_bold_style), Paragraph("60", td_style), Paragraph("O(B log<sub>2</sub> n<sub>c</sub>) [Rounds]", td_style)],
+        [Paragraph("DT-HSBP", td_style), Paragraph("41.78", td_style), Paragraph("51.753", td_style), Paragraph("O(1) [1 key]", td_style), Paragraph("600", td_style), Paragraph("O(n<sub>c</sub>)", td_style)],
+        [Paragraph("DT-HSBP + Contrib A", td_style), Paragraph("41.78", td_style), Paragraph("31.052", td_style), Paragraph("O(1) [1 key]", td_style), Paragraph("90 (0 at &eta;=1)", td_bold_style), Paragraph("O((1-&eta;)n<sub>c</sub>) [&rarr; O(1)]", td_bold_style)],
+        [Paragraph("DT-HSBP + Contrib B", td_style), Paragraph("41.78", td_style), Paragraph("7.763", td_style), Paragraph("O(1) [1 key]", td_style), Paragraph("600", td_style), Paragraph("O(1) handover", td_bold_style)],
+        [Paragraph("Full Proposed (DT-HSBP + A + B)", td_bold_style), Paragraph("<b>41.78</b>", td_bold_style), Paragraph("<b>4.140</b>", td_bold_style), Paragraph("<b>O(1) [1 key]</b>", td_bold_style), Paragraph("<b>90 (0 at &eta;=1)</b>", td_bold_style), Paragraph("<b>O(1) cryptographic lat.</b>", td_bold_style)]
     ]
     sec4_table = Table(sec4_table_data, colWidths=[114, 76, 76, 76, 76, 86])
     sec4_table.setStyle(TableStyle([

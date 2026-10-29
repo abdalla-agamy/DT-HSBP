@@ -1,6 +1,6 @@
 # DT-HSBP & Proposed Contributions: Comprehensive Evaluation Report
 
-**Date:** 2026-10-27 20:22:03  
+**Date:** 2026-10-29 22:06:34  
 **Evaluation Scope:** Full Swarm Comparative Analysis (Baseline Flat-SBP, HSBP, DT-HSBP, Contribution A, Contribution B, and Full Proposed Architecture)
 
 ---
@@ -187,7 +187,7 @@ $$S_{\text{TGDH}}^{\text{member}} = 2 \lceil \log_2 n_c \rceil + 1 = 2 \times 10
 
 ![Improvement Due to DT-HSBP](Improvement_DT_HSBP_Comparison.png)
 
-> **Key Takeaway:** For **Join events**, communication traffic is minimal and constant across all architectures because admitting a member only requires distributing the new session key under the current key. For **Leave events**, traffic explodes in Flat-SBP and HSBP, whereas DT-HSBP maintains a **~65% reduction** via stochastic collateral batching.
+> **Key Takeaway:** For **Join events**, communication traffic is minimal and constant across all architectures because admitting a member only requires distributing the new session key under the current key. For **Leave events**, traffic explodes in Flat-SBP and HSBP, whereas DT-HSBP maintains a **~55.6% reduction vs. HSBP** (and **> 91% vs. Flat-SBP**) at baseline $\eta = 0.85$ (reaching **~65%** at $\eta = 1.0$) via stochastic collateral batching.
 
 ---
 
@@ -195,24 +195,24 @@ $$S_{\text{TGDH}}^{\text{member}} = 2 \lceil \log_2 n_c \rceil + 1 = 2 \times 10
 
 | Cluster Size ($n_c$) | Batch Size ($B$) | Unsorted Exponentiations | Lifespan-Sorted (\eta = 0.85) | Savings (%) | Unsorted Time (ms) | Sorted Time (\eta = 0.85) |
 |:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| 50 | 1 | 25 | **4** | **84.0%** | 11.6524 | **1.7663** |
-| 50 | 2 | 33 | **5** | **84.8%** | 1.9676 | **0.2955** |
-| 50 | 3 | 38 | **6** | **84.2%** | 0.3229 | **0.0490** |
-| 50 | 5 | 42 | **6** | **85.7%** | 0.3644 | **0.0550** |
-| 50 | 8 | 44 | **7** | **84.1%** | 0.5634 | **0.0849** |
-| 50 | 10 | 45 | **7** | **84.4%** | 0.2328 | **0.0352** |
-| 100 | 1 | 50 | **8** | **84.0%** | 0.9119 | **0.1379** |
-| 100 | 2 | 67 | **10** | **85.1%** | 0.7694 | **0.1163** |
-| 100 | 3 | 75 | **11** | **85.3%** | 0.7614 | **0.1152** |
-| 100 | 5 | 83 | **12** | **85.5%** | 0.5839 | **0.0880** |
-| 100 | 8 | 89 | **13** | **85.4%** | 0.5219 | **0.0786** |
-| 100 | 10 | 91 | **14** | **84.6%** | 0.5064 | **0.0762** |
-| 200 | 1 | 100 | **15** | **85.0%** | 1.1163 | **0.1678** |
-| 200 | 2 | 133 | **20** | **85.0%** | 1.1479 | **0.1725** |
-| 200 | 3 | 150 | **23** | **84.7%** | 1.1060 | **0.1663** |
-| 200 | 5 | 167 | **25** | **85.0%** | 1.0867 | **0.1633** |
-| 200 | 8 | 178 | **27** | **84.8%** | 1.4989 | **0.2257** |
-| 200 | 10 | 182 | **27** | **85.2%** | 1.2270 | **0.1846** |
+| 50 | 1 | 25 | **4** | **84.0%** | 7.6625 | **1.1714** |
+| 50 | 2 | 33 | **5** | **84.8%** | 4.1423 | **0.6217** |
+| 50 | 3 | 38 | **6** | **84.2%** | 0.2986 | **0.0451** |
+| 50 | 5 | 42 | **6** | **85.7%** | 0.3569 | **0.0539** |
+| 50 | 8 | 44 | **7** | **84.1%** | 1.0053 | **0.1512** |
+| 50 | 10 | 45 | **7** | **84.4%** | 0.2341 | **0.0355** |
+| 100 | 1 | 50 | **8** | **84.0%** | 0.6126 | **0.0923** |
+| 100 | 2 | 67 | **10** | **85.1%** | 0.5277 | **0.0795** |
+| 100 | 3 | 75 | **11** | **85.3%** | 0.5585 | **0.0841** |
+| 100 | 5 | 83 | **12** | **85.5%** | 0.5420 | **0.0816** |
+| 100 | 8 | 89 | **13** | **85.4%** | 0.5270 | **0.0794** |
+| 100 | 10 | 91 | **14** | **84.6%** | 0.5134 | **0.0775** |
+| 200 | 1 | 100 | **15** | **85.0%** | 1.1630 | **0.1749** |
+| 200 | 2 | 133 | **20** | **85.0%** | 1.1707 | **0.1761** |
+| 200 | 3 | 150 | **23** | **84.7%** | 1.1021 | **0.1658** |
+| 200 | 5 | 167 | **25** | **85.0%** | 1.4844 | **0.2239** |
+| 200 | 8 | 178 | **27** | **84.8%** | 1.4885 | **0.2241** |
+| 200 | 10 | 182 | **27** | **85.2%** | 1.2193 | **0.1834** |
 
 ![Improvement Due to Contribution A](Improvement_Contribution_A_Lifespan_Sorting.png)
 
@@ -222,15 +222,15 @@ $$S_{\text{TGDH}}^{\text{member}} = 2 \lceil \log_2 n_c \rceil + 1 = 2 \times 10
 
 | Cluster Size ($n_c$) | Reactive Latency (ms) | Precomputed Latency (ms) | Expected Latency (\eta = 0.85) | Latency Reduction (%) |
 |:---:|:---:|:---:|:---:|:---:|
-| 25 | 0.4209 | 0.0074 | **0.0694** | **83.52%** |
-| 50 | 0.3111 | 0.0067 | **0.0524** | **83.17%** |
-| 75 | 0.4636 | 0.0068 | **0.0753** | **83.75%** |
-| 100 | 0.6240 | 0.0066 | **0.0992** | **84.10%** |
-| 150 | 0.8315 | 0.0060 | **0.1298** | **84.39%** |
-| 200 | 1.2392 | 0.0072 | **0.1920** | **84.51%** |
+| 25 | 0.5071 | 0.0067 | **0.0818** | **83.88%** |
+| 50 | 0.3297 | 0.0082 | **0.0564** | **82.90%** |
+| 75 | 0.4783 | 0.0080 | **0.0785** | **83.59%** |
+| 100 | 0.7096 | 0.0084 | **0.1136** | **83.99%** |
+| 150 | 0.9406 | 0.0081 | **0.1480** | **84.26%** |
+| 200 | 1.2844 | 0.0096 | **0.2009** | **84.36%** |
 
-- **Average Latency Reduction (\eta = 0.85):** **83.91%** (exceeds the required >= 50% threshold)
-- **Speedup Factor:** **6.22x** faster leader handover.
+- **Average Latency Reduction (\eta = 0.85):** **83.83%** (exceeds the required >= 50% threshold)
+- **Speedup Factor:** **6.19x** faster leader handover.
 
 ![Improvement Due to Contribution B](Improvement_Contribution_B_Zero_Latency.png)
 
@@ -242,12 +242,12 @@ $$S_{\text{TGDH}}^{\text{member}} = 2 \lceil \log_2 n_c \rceil + 1 = 2 \times 10
 |:---|:---:|:---:|:---:|:---:|:---:|
 | Flat-SBP | 468.53 | 182.6643 | 1 | 3000 | $\\mathcal{O}(N)$ |
 | HSBP | 93.46 | 54.9124 | 1 | 1500 | $\\mathcal{O}(n_c \\cdot B)$ |
-| LKH (d=3) | 2.53 | 1.5898 | 7 | 0 | $\\mathcal{O}(B \\log_d n_c)$ |
-| TGDH (Tree DH) | 3.75 | 5.6056 | 21 | 60 | $\\mathcal{O}(B \\log_2 n_c) \\text{ [Multi-Round]}$ |
+| LKH (d=3) | 2.53 | 2.3632 | 7 | 0 | $\\mathcal{O}(B \\log_d n_c)$ |
+| TGDH (Tree DH) | 3.75 | 7.9075 | 21 | 60 | $\\mathcal{O}(B \\log_2 n_c) \\text{ [Multi-Round]}$ |
 | DT-HSBP | 41.78 | 51.7526 | 1 | 600 | $\\mathcal{O}(n_c)$ |
-| DT-HSBP + Contrib A | 41.78 | 31.0516 | 1 | 0 | $\\mathcal{O}(1) \\text{ intermediate}$ |
+| DT-HSBP + Contrib A | 41.78 | 31.0516 | 1 | 90 | $\\mathcal{O}(1) \\text{ intermediate}$ |
 | DT-HSBP + Contrib B | 41.78 | 7.7629 | 1 | 600 | $\\mathcal{O}(1) \\text{ handover}$ |
-| Full Proposed (DT-HSBP + A + B) | 41.78 | 4.1402 | 1 | 0 | $\\mathcal{O}(1) \\text{ intermediate + zero cryptographic latency}$ |
+| Full Proposed (DT-HSBP + A + B) | 41.78 | 4.1402 | 1 | 90 | $\\mathcal{O}(1) \\text{ intermediate + zero cryptographic latency}$ |
 
 ![Overall Proposed System Improvement](Overall_Proposed_System_Improvement.png)
 
@@ -257,7 +257,7 @@ $$S_{\text{TGDH}}^{\text{member}} = 2 \lceil \log_2 n_c \rceil + 1 = 2 \times 10
 - **Communication Reduction vs Flat-SBP:** **91.08%**  
 - **Leader Rekeying Latency Reduction vs HSBP:** **92.46%**  
 - **Leader Rekeying Latency Reduction vs Flat-SBP:** **97.73%**  
-- **Intermediate DH Exponentiations:** Driven to **0 on-the-fly exponentiations** along prefix.
+- **Intermediate DH Exponentiations:** Reduced by **85.0%** at baseline $\eta = 0.85$ (from 600 down to **90 expected exponentiations**, and **0 on-the-fly exponentiations** at $\eta = 1.0$).
 
 ---
 

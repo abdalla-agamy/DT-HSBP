@@ -505,6 +505,9 @@ contribBTime = dtHsbpTime * 0.15;
 % Combined Full Proposed System: O(1) tail truncation + zero-latency cache hit
 fullProposedTime = dtHsbpTime * 0.08;
 
+etaBaseline = 0.85;
+expectedSortedOps = round((1 - etaBaseline) * 600); % 90 ops at eta = 0.85 (0 at eta = 1.0)
+
 res.communicationBytes = [
     flatBytes, ...
     hsbpBytes, ...
@@ -538,15 +541,16 @@ res.keysStoredPerMember = [
     1      % Proposed Full: 1 group key
     ];
 
+
 res.intermediateExponentiations = [
-    3000, ...      % Flat-SBP evaluates all N
-    600 * 2.5, ... % HSBP evaluates nc for each departure
-    0, ...         % LKH: 0 modexps (symmetric ciphers)
-    60, ...        % TGDH: 2 * log2(nc) modexps per leave * 3 = 60
-    600, ...       % DT-HSBP evaluates nc once
-    0, ...         % + Contrib A: 0 (100% prefix preservation via lifespan sorting)
-    600, ...       % + Contrib B: reactive recomputes (precomputed offline)
-    0              % Proposed Full: 0 (Contribution A prefix preservation)
+    3000, ...              % Flat-SBP evaluates all N
+    600 * 2.5, ...         % HSBP evaluates nc for each departure
+    0, ...                 % LKH: 0 modexps (symmetric ciphers)
+    60, ...                % TGDH: 2 * log2(nc) modexps per leave * 3 = 60
+    600, ...               % DT-HSBP evaluates nc once
+    expectedSortedOps, ... % + Contrib A: 85% reduction at eta = 0.85 (0 at eta = 1.0)
+    600, ...               % + Contrib B: reactive recomputes (precomputed offline)
+    expectedSortedOps      % Proposed Full: 85% reduction at eta = 0.85 (0 at eta = 1.0)
     ];
 
 % Relative metrics vs HSBP baseline
@@ -1114,7 +1118,7 @@ for s = 1:numel(dtHsbp.swarmSizes)
 end
 
 fprintf(fid, '\n![Improvement Due to DT-HSBP](Improvement_DT_HSBP_Comparison.png)\n\n');
-fprintf(fid, '> **Key Takeaway:** For **Join events**, communication traffic is minimal and constant across all architectures because admitting a member only requires distributing the new session key under the current key. For **Leave events**, traffic explodes in Flat-SBP and HSBP, whereas DT-HSBP maintains a **~65%% reduction** via stochastic collateral batching.\n\n');
+fprintf(fid, '> **Key Takeaway:** For **Join events**, communication traffic is minimal and constant across all architectures because admitting a member only requires distributing the new session key under the current key. For **Leave events**, traffic explodes in Flat-SBP and HSBP, whereas DT-HSBP maintains a **~%.1f%% reduction vs. HSBP** (and **> 91%% vs. Flat-SBP**) at baseline $\\eta = 0.85$ (reaching **~65%%** at $\\eta = 1.0$) via stochastic collateral batching.\n\n',mean(dtHsbp.byteReductionVsHSBP));
 
 fprintf(fid, '---\n\n');
 fprintf(fid, '## 2. Empirical Results: Improvement Due to Contribution A (Lifespan-Aware DH Chain, \\eta \\in [0.5, 1.0])\n\n');
@@ -1186,7 +1190,7 @@ fprintf(fid, '- **Communication Reduction vs HSBP:** **%.2f%%**  \n', overall.co
 fprintf(fid, '- **Communication Reduction vs Flat-SBP:** **%.2f%%**  \n', overall.commReductionVsFlat);
 fprintf(fid, '- **Leader Rekeying Latency Reduction vs HSBP:** **%.2f%%**  \n', overall.latencyReductionVsHSBP);
 fprintf(fid, '- **Leader Rekeying Latency Reduction vs Flat-SBP:** **%.2f%%**  \n', overall.latencyReductionVsFlat);
-fprintf(fid, '- **Intermediate DH Exponentiations:** Driven to **0 on-the-fly exponentiations** along prefix.\n\n');
+fprintf(fid, '- **Intermediate DH Exponentiations:** Reduced by **85.0%%** at baseline $\\eta = 0.85$ (from 600 down to **90 expected exponentiations**, and **0 on-the-fly exponentiations** at $\\eta = 1.0$).\n\n');
 
 fprintf(fid, '---\n\n');
 fprintf(fid, '## 5. Empirical Results: Prediction Accuracy Parameter (\\eta) Sensitivity Analysis\n\n');
